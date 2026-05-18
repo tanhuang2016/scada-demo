@@ -5,7 +5,7 @@ add_executable(device-simulator
 
 target_link_libraries(device-simulator PRIVATE scada_common)
 
-target_compile_features(device-simulator PRIVATE cxx_std_17)
+target_compile_features(device-simulator PRIVATE cxx_std_11)
 
 target_include_directories(device-simulator PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

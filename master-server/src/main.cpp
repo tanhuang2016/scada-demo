@@ -1,14 +1,19 @@
+/**
+ * @file   main.cpp
+ * @brief  主站进程入口：注册信号处理并运行 MasterApplication
+ */
+
 #include "app/MasterApplication.hpp"
 
 #include <csignal>
 
 namespace {
 
-master::MasterApplication* g_app = nullptr;
+master::MasterApplication* g_app = 0;
 
 void handleSignal(int)
 {
-    if (g_app != nullptr) {
+    if (g_app != 0) {
         g_app->requestStop();
     }
 }
@@ -24,6 +29,6 @@ int main()
     std::signal(SIGTERM, handleSignal);
 
     const int code = app.run();
-    g_app = nullptr;
+    g_app = 0;
     return code;
 }

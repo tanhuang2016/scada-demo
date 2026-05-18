@@ -1,30 +1,38 @@
+/**
+ * @file   protocol.cpp
+ * @brief  TELEM 文本行协议实现（C++11）
+ */
+
 #include "scada/protocol.hpp"
 
 #include <sstream>
 
 #include "scada/config_defaults.hpp"
 
-namespace scada::protocol {
+namespace scada {
+namespace protocol {
 
 namespace {
 
-constexpr char kDelimiter = '|';
+const char kDelimiter = '|';
+const char kTelemPrefix[] = "TELEM";
 
 }  // namespace
 
 std::string encodeTelemetry(const Telemetry& telemetry)
 {
     std::ostringstream oss;
-    oss << "TELEM" << kDelimiter << telemetry.deviceId << kDelimiter << telemetry.voltage
+    oss << kTelemPrefix << kDelimiter << telemetry.deviceId << kDelimiter << telemetry.voltage
         << kDelimiter << telemetry.current << kDelimiter
         << static_cast<int>(telemetry.switchState) << kDelimiter << telemetry.timestamp;
     return oss.str();
 }
 
-std::optional<Telemetry> decodeTelemetry(const std::string& line)
+bool decodeTelemetry(const std::string& line, Telemetry& out)
 {
-    if (line.rfind("TELEM", 0) != 0) {
-        return std::nullopt;
+    /* 前缀必须为 TELEM| */
+    if (line.size() < 6 || line.compare(0, 5, kTelemPrefix) != 0 || line[5] != kDelimiter) {
+        return false;
     }
 
     Telemetry telemetry;
@@ -32,28 +40,30 @@ std::optional<Telemetry> decodeTelemetry(const std::string& line)
     int switchState = 0;
     std::istringstream iss(line);
     char delimiter = 0;
+
     if (!(iss >> tag >> delimiter) || delimiter != kDelimiter) {
-        return std::nullopt;
+        return false;
     }
     if (!(std::getline(iss, telemetry.deviceId, kDelimiter) && !telemetry.deviceId.empty())) {
-        return std::nullopt;
+        return false;
     }
-    if (!(iss >> telemetry.voltage >> delimiter && delimiter == kDelimiter)) {
-        return std::nullopt;
+    if (!(iss >> telemetry.voltage >> delimiter) || delimiter != kDelimiter) {
+        return false;
     }
-    if (!(iss >> telemetry.current >> delimiter && delimiter == kDelimiter)) {
-        return std::nullopt;
+    if (!(iss >> telemetry.current >> delimiter) || delimiter != kDelimiter) {
+        return false;
     }
-    if (!(iss >> switchState >> delimiter && delimiter == kDelimiter)) {
-        return std::nullopt;
+    if (!(iss >> switchState >> delimiter) || delimiter != kDelimiter) {
+        return false;
     }
     if (!(iss >> telemetry.timestamp)) {
-        return std::nullopt;
+        return false;
     }
 
-    telemetry.switchState = switchState != 0 ? SwitchState::Closed : SwitchState::Open;
+    telemetry.switchState = (switchState != 0) ? SwitchState::Closed : SwitchState::Open;
     telemetry.alarm = isVoltageAlarm(telemetry.voltage);
-    return telemetry;
+    out = telemetry;
+    return true;
 }
 
 bool isVoltageAlarm(double voltage)
@@ -61,4 +71,5 @@ bool isVoltageAlarm(double voltage)
     return voltage < config::kVoltageMin || voltage > config::kVoltageMax;
 }
 
-}  // namespace scada::protocol
+}  // namespace protocol
+}  // namespace scada

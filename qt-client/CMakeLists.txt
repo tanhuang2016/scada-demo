@@ -7,6 +7,7 @@ find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
 add_executable(qt-client
     src/main.cpp
     src/MainWindow.cpp
+    ui/MainWindow.ui
 )
 
 target_link_libraries(qt-client PRIVATE
@@ -16,7 +17,7 @@ target_link_libraries(qt-client PRIVATE
     Qt5::Network
 )
 
-target_compile_features(qt-client PRIVATE cxx_std_17)
+target_compile_features(qt-client PRIVATE cxx_std_11)
 
 target_include_directories(qt-client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

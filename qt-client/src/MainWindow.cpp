@@ -1,30 +1,27 @@
+/**
+ * @file   MainWindow.cpp
+ * @brief  主窗口：setupUi 加载 .ui，代码中仅更新动态文案与状态栏
+ */
+
 #include "MainWindow.hpp"
 
-#include <QLabel>
-#include <QStatusBar>
-#include <QVBoxLayout>
-#include <QWidget>
+#include "ui_MainWindow.h"
 
 #include "scada/config_defaults.hpp"
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
 {
-    setWindowTitle(QStringLiteral("SCADA Demo"));
-    resize(960, 640);
+    ui->setupUi(this);
 
-    auto* central = new QWidget(this);
-    auto* layout = new QVBoxLayout(central);
-
-    statusLabel_ = new QLabel(
-        tr("stub mode — waiting for master-server on port %1")
-            .arg(scada::config::kMasterToUiPort),
-        central);
-    statusLabel_->setAlignment(Qt::AlignCenter);
-    layout->addWidget(statusLabel_);
-
-    setCentralWidget(central);
-    statusBar()->showMessage(tr("Ready"));
+    /* 占位文案：迭代 3 连接主站后改为在线设备数等 */
+    ui->statusLabel->setText(
+        tr("脚手架模式 — 主站推送端口 %1（详见迭代 3）").arg(scada::config::kMasterToUiPort));
+    statusBar()->showMessage(tr("就绪"));
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow()
+{
+    delete ui;
+}

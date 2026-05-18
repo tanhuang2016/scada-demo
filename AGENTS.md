@@ -1,90 +1,145 @@
 # SCADA Demo — AI 协作说明
 
+> **详细需求、表结构、每迭代演示步骤** → 见 `docs/`。本文只写 AI 写代码时必须遵守的约定。
+
 ## 项目使命
 
-极简电力 SCADA 演示系统（纯软件模拟）：`device-simulator` → `master-server` → `qt-client`。用于学习 C++/Qt/Linux 工业开发及面试演示。当前为**脚手架阶段**，业务逻辑按 8 周计划逐步补齐。
+设备中心模型的 SCADA 演示（纯软件模拟）：
+
+```text
+device-simulator ──IEC104:2404──► master-server ──TCP:5002/5003──► qt-client
+                                      │
+                                      ▼ MySQL（业务）
+```
+
+- 现场协议只在 **主站 ↔ 模拟器**；Qt **不**实现 104。
+- 配置与历史以 **MySQL** 为准；Qt 本地 **SQLite** 仅存界面偏好。
+
+## 文档索引
+
+| 文件 | 何时读 |
+|------|--------|
+| [docs/roadmap.md](docs/roadmap.md) | 开工前：当前迭代的交付物 / 演示步骤 / 不做 |
+| [docs/requirements.md](docs/requirements.md) | 功能范围、验收、终态演示 |
+| [docs/data-model.md](docs/data-model.md) | 表字段、种子设备 RTU001–003 |
+| [docs/architecture.md](docs/architecture.md) | 三程序职责、端口 |
+| [docs/coding-standards.md](docs/coding-standards.md) | **C++11、注释、Qt .ui 规范（必读）** |
+
+## 当前迭代
+
+**迭代 0 完成** → 下一：**迭代 1（MySQL 基座）**  
+详见 [roadmap §迭代 1](docs/roadmap.md#迭代-1数据与配置基座)。
+
+完成某迭代后：更新下文「实现进度」表，并在 `roadmap.md` 勾选完成标准。
+
+## 通信与端口
+
+| 链路 | 协议 | 端口 | 实现位置 |
+|------|------|------|----------|
+| 模拟器 → 主站 | IEC 60870-5-104 | 2404 | `device-simulator/`, `master-server/src/net/` |
+| 主站 → Qt 推送 | 文本行（见下） | 5002 | `master-server/src/push/`, `qt-client/src/net/` |
+| Qt → 主站 控制/登录 | 文本行 | 5003 | `qt-client/src/net/`, `master-server/` 命令处理 |
+
+常量：`common/include/scada/config_defaults.hpp`。
+
+### 主站 ↔ Qt 帧格式（`common` 编解码，`|` 分隔）
+
+| 方向 | 前缀 | 示例 |
+|------|------|------|
+| 推送实时 | `UPDATE` | `UPDATE\|RTU001\|228.5\|12.3\|1\|0`（末位 alarm: 0/1） |
+| 遥控 | `CTRL` | `CTRL\|RTU001\|1`（1=合闸 0=分闸） |
+| 登录请求 | `LOGIN` | `LOGIN\|admin\|123456` |
+| 登录响应 | `LOGIN_ACK` | `LOGIN_ACK\|1\|ok`（1=成功） |
+
+设备侧 104 与上述帧**分离**；`TELEM|...` 仅为脚手架桩，迭代 2 后设备数据经 104 解析再转为 `UPDATE` 推送。
+
+### 告警（主站判定）
+
+- 电压 ∉ [215, 235] V（或以测点 `limit_low/high` 为准）
+- 通信中断：超时未收到该设备数据
 
 ## 技术栈
 
-- C++17、CMake 3.16+
-- Qt **5.15**（Widgets、Network；历史曲线后续用 Charts）
-- SQLite（主站存库，第 4 周起实现，脚手架尚未链接）
-- 主开发环境：**Windows** + Qt Creator；主站目标可迁 Linux
+- **C++11**（全项目，禁止 C++14/17 语法）、CMake 3.16+、Qt **5.15**（Widgets、Network、Charts）
+- MySQL 8.x（业务库名建议 `scada_demo`）
+- 开发：Windows + Qt Creator（MinGW）；主站部署目标 Linux
 
-## 仓库结构
+## Qt 界面（强制）
 
-```
-scada-demo/
-├── CMakeLists.txt
-├── AGENTS.md
-├── README.md
-├── common/              # 静态库：协议、类型、端口常量
-├── master-server/       # 主站后台，启动类 MasterApplication
-├── device-simulator/    # 设备模拟器，启动类 SimulatorApplication
-├── qt-client/           # Qt 监控界面，MainWindow
-└── docs/
-```
+- **布局与静态控件**：必须用 **Qt Designer** 编辑 `qt-client/ui/*.ui`，禁止在 `.cpp` 里手写整套 `QVBoxLayout`/`new QPushButton` 搭主界面。
+- **混合用法**：`.ui` 负责布局与 `objectName`；`.cpp` 负责业务、网络、告警样式、动态列表项；动态控件挂到 `.ui` 中的容器 `QWidget`。
+- **CMake**：每个窗口/页面将 `.ui` 列入 `add_executable`，保持 `AUTOUIC ON`。
+- **例外**：`Ui::MainWindow* ui` 可用 `new` + `setupUi`（Qt 惯例）；其余堆对象优先智能指针。
 
-## 数据流与端口
+详见 [docs/coding-standards.md](docs/coding-standards.md)。
 
-| 端口 | 方向 |
-|------|------|
-| 5001 | device-simulator → master-server |
-| 5002 | master-server → qt-client（推送） |
-| 5003 | qt-client → master-server（遥控） |
+## 代码放置约定
 
-**文本协议（单行，`|` 分隔）**
-
-| 类型 | 示例 |
-|------|------|
-| 遥测上报 | `TELEM\|dev01\|228.5\|12.3\|1\|1716000000` |
-| UI 推送 | `UPDATE\|dev01\|228.5\|12.3\|1\|0`（末字段 alarm） |
-| 遥控 | `CTRL\|dev01\|1` |
-
-电压告警：不在 [215, 235] V。电流演示范围 0~30A，暂不告警。
+| 模块 | 路径 | 说明 |
+|------|------|------|
+| 公共类型/协议 | `common/include/scada/` | 禁止三端复制协议定义 |
+| 主站入口 | `master-server/src/app/MasterApplication.*` | `main.cpp` 只做信号注册 |
+| 主站网络/104 | `master-server/src/net/` | |
+| 主站存库 | `master-server/src/storage/` | |
+| 主站推送 | `master-server/src/push/` | |
+| 主站业务流水线 | `master-server/src/pipeline/` | 告警、遥控路由 |
+| 模拟器 | `device-simulator/src/app/`, `src/sim/` | |
+| Qt 界面布局 | `qt-client/ui/*.ui` | Designer 编辑 |
+| Qt 页面逻辑 | `qt-client/src/pages/` + 同名 `.ui` | |
+| Qt 网络 | `qt-client/src/net/MasterClient.*` | |
+| SQL 脚本 | `docs/sql/` | schema.sql、seed.sql |
+| 迭代 8 脚本 | `scripts/run_demo.ps1` | |
 
 ## 编码规范
 
-- 优先 `std::unique_ptr` / `std::shared_ptr`，避免裸 `new`/`delete`
-- 网络与 Qt UI 分线程；跨线程用 Qt 信号槽或 `QMetaObject::invokeMethod`
-- 公共协议/类型只放在 `common/include/scada/`，三端禁止各自复制
-- 应用入口：`main.cpp` 仅负责信号与启动；逻辑放在 `*Application` 或 `MainWindow`
+- **注释**：新增/修改的每个 `.h/.cpp` 须含 `@file`/`@brief`；公共类与函数写清参数、返回值；关键逻辑写中文块注释（见 coding-standards）。
+- **C++11**：不用 `std::optional`、`inline` 变量、嵌套命名空间 `a::b`；可选结果用 `bool` + 出参。
+- 主站/模拟器：智能指针 + RAII；Qt 业务对象除 `Ui::*` 外尽量少裸 `new`。
+- 104 与 Socket 在主站线程；Qt 控件仅在 UI 线程更新，跨线程用信号槽。
+- 领域命名与表字段一致：`device_code`、`RTU001` 等。
+- 日志前缀：`[master-server]`、`[device-simulator]`、`[qt-client]`。
 
-## 构建
+## 构建与联调
 
 ```powershell
-cmake -S . -B build -DCMAKE_PREFIX_PATH="C:/Qt/5.15.2/msvc2019_64"
+cmake -S . -B build -DCMAKE_PREFIX_PATH="D:/soft/Qt/5.15.2/mingw81_64" -G "MinGW Makefiles" `
+  -DCMAKE_MAKE_PROGRAM="D:/soft/Qt/Tools/mingw810_64/bin/mingw32-make.exe"
 cmake --build build
 ```
 
-可执行文件输出：`build/bin/`（或 kit 对应目录）。
+启动顺序：**device-simulator → master-server → qt-client**。
 
-启动顺序（联调）：`master-server` → `device-simulator` → `qt-client`。
+演示登录（迭代 8）：`admin` / `123456`，主站内存校验，无用户表。
 
-## 实现进度（脚手架）
+## 实现进度
 
-- [x] 目录与 CMake 多目标
-- [x] `common` 协议编解码桩
-- [x] 三端启动类占位
-- [ ] TCP 通信、多线程收包
-- [ ] SQLite 持久化
-- [ ] Qt 四遥界面、曲线、告警动画
-- [ ] 前后端联调脚本
-
-## AI 边界（勿擅自做）
-
-- 不改为 JSON/gRPC/微服务，除非用户明确要求
-- 不引入真实 IEC 104/Modbus，除非明确要求
-- 不修改 `build/`、`.qtcreator/`
-- 不扩展遥调、真实硬件驱动
-- 除 `README.md`/`docs/` 外不批量新增文档
-
-## 8 周代码落点
-
-| 周次 | 目录 |
+| 迭代 | 状态 |
 |------|------|
-| 3 | `master-server/src/net/`, `device-simulator/`, `common` 协议 |
-| 4 | `master-server/src/storage/`, `push/` |
-| 5 | `master-server/src/pipeline/`, 日志 |
-| 6-7 | `qt-client/src/widgets/`, `net/` |
-| 8 | `scripts/` 联调 |
+| 0 脚手架 | 完成 |
+| 1 MySQL 基座 | 未开始 |
+| 2 IEC104 单设备 | 未开始 |
+| 3 Qt 实时监控 | 未开始 |
+| 4 三设备在线 | 未开始 |
+| 5 设备维护 | 未开始 |
+| 6 遥控日志 | 未开始 |
+| 7 告警 | 未开始 |
+| 8 曲线登录联调 | 未开始 |
+
+## AI 工作流
+
+1. 用户指定迭代 N → 打开 `docs/roadmap.md` 对应章节  
+2. 仅实现该迭代「交付物」，不做「不做」章节内容  
+3. 需求变更 → 先改 `docs/requirements.md` / `roadmap.md`，再写代码  
+4. 完成后更新上表 + roadmap 复选框  
+
+## 边界（禁止擅自）
+
+- 在 Qt `.cpp` 中手写完整主界面布局（须用 `.ui`）  
+- 使用 C++14/17 特性或擅自升级标准  
+- 提交无文件头/无公共 API 说明的“裸代码”  
+- Qt 进程连接 2404 或嵌入 104 协议栈  
+- 业务数据写入 `qt-client/data/client_config.db`  
+- 用户表、权限、遥调、真实硬件  
+- 改为 SQLite 作业务库、或去掉 IEC104/MySQL  
+- 修改 `build/`、`.qtcreator/`、`temp/`  
+- 未经要求新增大量 markdown（`docs/` 除外）

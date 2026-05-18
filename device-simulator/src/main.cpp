@@ -1,14 +1,19 @@
+/**
+ * @file   main.cpp
+ * @brief  设备模拟器入口：信号处理 + SimulatorApplication
+ */
+
 #include "app/SimulatorApplication.hpp"
 
 #include <csignal>
 
 namespace {
 
-simulator::SimulatorApplication* g_app = nullptr;
+simulator::SimulatorApplication* g_app = 0;
 
 void handleSignal(int)
 {
-    if (g_app != nullptr) {
+    if (g_app != 0) {
         g_app->requestStop();
     }
 }
@@ -24,6 +29,6 @@ int main()
     std::signal(SIGTERM, handleSignal);
 
     const int code = app.run();
-    g_app = nullptr;
+    g_app = 0;
     return code;
 }

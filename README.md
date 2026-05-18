@@ -1,6 +1,6 @@
 # SCADA Demo
 
-极简电力 SCADA 演示系统（C++ 主站 + Qt 界面 + 设备模拟器），用于学习与面试演示。
+极简电力 SCADA 演示系统（**C++11** 主站 + Qt 5.15 界面 + 设备模拟器），用于学习与面试演示。Qt 界面使用 **Designer（.ui）** 与代码混合开发。
 
 ## 目录
 
@@ -40,4 +40,13 @@ cmake --build build
 - **子站/设备**：`device-simulator` 模拟
 - **四遥**：遥测、遥信、遥控（本演示暂不实现遥调）
 
-详细协议与 AI 协作约定见 [AGENTS.md](AGENTS.md)。
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [docs/roadmap.md](docs/roadmap.md) | 分阶段迭代（每阶段可演示） |
+| [docs/requirements.md](docs/requirements.md) | 完整需求与验收 |
+| [docs/architecture.md](docs/architecture.md) | 架构与端口 |
+| [AGENTS.md](AGENTS.md) | AI 协作约定 |
+
+当前进度：**迭代 0**（脚手架）已完成，下一步 **迭代 1**（MySQL 建表 + 主站读配置）。
