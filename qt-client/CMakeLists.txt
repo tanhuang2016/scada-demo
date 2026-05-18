@@ -27,3 +27,29 @@ target_include_directories(qt-client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}  # 添加构建目录到包含路径，用于查找生成的 ui_MainWindow.h
 )
+
+# 自动部署 Qt DLL 到可执行文件目录（Windows 上）
+if(WIN32)
+    # 查找 windeployqt 工具
+    get_target_property(QT_QMAKE_EXECUTABLE Qt5::qmake LOCATION)
+    get_filename_component(QT_BIN_DIR ${QT_QMAKE_EXECUTABLE} DIRECTORY)
+    find_program(WINDEPLOYQT_EXECUTABLE
+        NAMES windeployqt
+        PATHS ${QT_BIN_DIR}
+        DOC "Qt deployment tool for Windows"
+    )
+
+    if(WINDEPLOYQT_EXECUTABLE)
+        # 添加自定义目标来部署依赖
+        add_custom_command(TARGET qt-client POST_BUILD
+            COMMAND ${WINDEPLOYQT_EXECUTABLE}
+                --no-translations
+                --no-system-d3d-compiler
+                --no-opengl-sw
+                $<TARGET_FILE:qt-client>
+            COMMENT "Deploying Qt dependencies..."
+        )
+    else()
+        message(WARNING "windeployqt not found. You may need to manually copy Qt DLLs to the executable directory.")
+    endif()
+endif()

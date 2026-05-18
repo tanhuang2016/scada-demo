@@ -19,6 +19,24 @@ if(DEFINED ENV{QTDIR})
     list(APPEND CMAKE_PREFIX_PATH $ENV{QTDIR})
 endif()
 
+# 自动检测常见的 Qt 5 安装路径（Windows）
+if(WIN32 AND NOT CMAKE_PREFIX_PATH)
+    # 常见路径列表
+    set(QT5_POSSIBLE_PATHS
+        "D:/soft/Qt/5.15.2/mingw81_64"
+        "C:/Qt/5.15.2/mingw81_64"
+        "C:/Qt5/5.15.2/mingw81_64"
+    )
+
+    foreach(QT_PATH ${QT5_POSSIBLE_PATHS})
+        if(EXISTS ${QT_PATH}/lib/cmake/Qt5/Qt5Config.cmake)
+            message(STATUS "Found Qt 5 at: ${QT_PATH}")
+            list(APPEND CMAKE_PREFIX_PATH ${QT_PATH})
+            break()
+        endif()
+    endforeach()
+endif()
+
 # 子项目：common 必须先于各可执行文件
 add_subdirectory(common)
 add_subdirectory(master-server)
