@@ -73,9 +73,9 @@
 
 ### 完成标准
 
-- [ ] 5 张业务表创建成功（device, point, telemetry, alarm, operation_log）
-- [ ] 种子 RTU001–RTU003 可查
-- [ ] 主站无 104 也能完成「读配置」演示
+- [x] 5 张业务表创建成功（device, point, telemetry, alarm, operation_log）
+- [x] 种子 RTU001–RTU003 可查
+- [x] 主站无 104 也能完成「读配置」演示
 
 ### 不做
 

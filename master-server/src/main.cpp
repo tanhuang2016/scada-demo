@@ -7,6 +7,10 @@
 
 #include <csignal>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace {
 
 master::MasterApplication* g_app = 0;
@@ -22,6 +26,12 @@ void handleSignal(int)
 
 int main()
 {
+#ifdef _WIN32
+    // 设置 Windows 控制台编码为 UTF-8，解决中文乱码
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+
     master::MasterApplication app;
     g_app = &app;
 
