@@ -25,6 +25,7 @@ if(DEFINED MYSQL_PATH)
 else()
     # 尝试常见位置（包括 Connector/C）
     set(MYSQL_POSSIBLE_PATHS
+        "${CMAKE_SOURCE_DIR}/external/mysql"  # 项目自带依赖
         "D:/soft/mysql/mysql-connector-c-6.1.11-winx64"
         "C:/Program Files/MySQL/MySQL Server 8.0"
         "C:/Program Files (x86)/MySQL/MySQL Server 8.0"
