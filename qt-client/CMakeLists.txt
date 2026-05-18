@@ -2,11 +2,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# 告诉 AUTOUIC 在哪里查找 .ui 文件
+set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
+
 find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
 
 add_executable(qt-client
     src/main.cpp
     src/MainWindow.cpp
+    src/MainWindow.hpp
     ui/MainWindow.ui
 )
 
@@ -21,4 +25,5 @@ target_compile_features(qt-client PRIVATE cxx_std_11)
 
 target_include_directories(qt-client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_BINARY_DIR}  # 添加构建目录到包含路径，用于查找生成的 ui_MainWindow.h
 )
