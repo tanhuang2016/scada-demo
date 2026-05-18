@@ -24,6 +24,7 @@ device-simulator ──IEC104:2404──► master-server ──TCP:5002/5003─
 | [docs/data-model.md](docs/data-model.md) | 表字段、种子设备 RTU001–003 |
 | [docs/architecture.md](docs/architecture.md) | 三程序职责、端口 |
 | [docs/coding-standards.md](docs/coding-standards.md) | **C++11、注释、Qt .ui 规范（必读）** |
+| [docs/ai-handoff.md](docs/ai-handoff.md) | 给其他 AI 工具的提示词模板 |
 
 ## 当前迭代
 
