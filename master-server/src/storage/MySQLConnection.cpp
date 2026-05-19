@@ -158,13 +158,17 @@ int MySQLConnection::execute(const std::string& sql)
         }
     }
 
+    std::cout << "[master-server] MySQL execute SQL: " << sql << '\n';
     if (mysql_query(mysql_, sql.c_str()) != 0) {
         std::cerr << "[master-server] MySQL 执行失败: "
                   << mysql_error(mysql_) << '\n';
         return -1;
     }
 
-    return static_cast<int>(mysql_affected_rows(mysql_));
+    int affectedRows = static_cast<int>(mysql_affected_rows(mysql_));
+    std::cout << "[master-server] MySQL execute affected rows: "
+              << affectedRows << '\n';
+    return affectedRows;
 }
 
 bool MySQLConnection::queryOne(const std::string& sql, std::function<bool(MYSQL*)> row_handler)
@@ -184,26 +188,16 @@ bool MySQLConnection::queryOne(const std::string& sql, std::function<bool(MYSQL*
         }
     }
 
+    std::cout << "[master-server] MySQL queryOne SQL: " << sql << '\n';
     if (mysql_query(mysql_, sql.c_str()) != 0) {
         std::cerr << "[master-server] MySQL 查询失败: "
                   << mysql_error(mysql_) << '\n';
         return false;
     }
 
-    MYSQL_RES* res = mysql_store_result(mysql_);
-    if (!res) {
-        std::cerr << "[master-server] MySQL 获取结果失败: "
-                  << mysql_error(mysql_) << '\n';
-        return false;
-    }
-
-    bool ok = false;
-    MYSQL_ROW row = mysql_fetch_row(res);
-    if (row) {
-        ok = row_handler(mysql_);
-    }
-
-    mysql_free_result(res);
+    bool ok = row_handler(mysql_);
+    std::cout << "[master-server] MySQL queryOne result: "
+              << (ok ? "OK" : "FAILED") << '\n';
     return ok;
 }
 
@@ -224,29 +218,15 @@ bool MySQLConnection::queryMany(const std::string& sql, std::function<bool(MYSQL
         }
     }
 
+    std::cout << "[master-server] MySQL queryMany SQL: " << sql << '\n';
     if (mysql_query(mysql_, sql.c_str()) != 0) {
         std::cerr << "[master-server] MySQL 查询失败: "
                   << mysql_error(mysql_) << '\n';
         return false;
     }
-
-    MYSQL_RES* res = mysql_store_result(mysql_);
-    if (!res) {
-        std::cerr << "[master-server] MySQL 获取结果失败: "
-                  << mysql_error(mysql_) << '\n';
-        return false;
-    }
-
-    bool ok = true;
-    MYSQL_ROW row;
-    while ((row = mysql_fetch_row(res)) != nullptr) {
-        if (!row_handler(mysql_)) {
-            ok = false;
-            break;
-        }
-    }
-
-    mysql_free_result(res);
+    bool ok = row_handler(mysql_);
+    std::cout << "[master-server] MySQL queryMany result: "
+              << (ok ? "OK" : "FAILED") << '\n';
     return ok;
 }
 

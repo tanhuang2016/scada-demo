@@ -15,6 +15,43 @@
 namespace master {
 namespace storage {
 
+namespace {
+
+void printResultRows(const char* scope, MYSQL_RES* res)
+{
+    unsigned int fieldCount = mysql_num_fields(res);
+    MYSQL_FIELD* fields = mysql_fetch_fields(res);
+    unsigned long long rowCount = mysql_num_rows(res);
+
+    std::cout << "[master-server] MySQL " << scope
+              << " rows: " << rowCount << '\n';
+
+    MYSQL_ROW row;
+    unsigned long rowIndex = 0;
+    while ((row = mysql_fetch_row(res)) != nullptr) {
+        unsigned long* lengths = mysql_fetch_lengths(res);
+        std::cout << "[master-server] MySQL " << scope
+                  << " row[" << rowIndex << "]: ";
+        for (unsigned int i = 0; i < fieldCount; ++i) {
+            if (i > 0) {
+                std::cout << " | ";
+            }
+            std::cout << fields[i].name << "=";
+            if (row[i]) {
+                std::cout.write(row[i], lengths[i]);
+            } else {
+                std::cout << "NULL";
+            }
+        }
+        std::cout << '\n';
+        ++rowIndex;
+    }
+
+    mysql_data_seek(res, 0);
+}
+
+}  // namespace
+
 DeviceRepository::DeviceRepository()
 {
 }
@@ -27,16 +64,18 @@ bool DeviceRepository::loadAllEnabled(std::vector<DeviceConfig>& devices)
 {
     devices.clear();
 
-    return MySQLConnection::instance().queryMany(
+    bool ok = MySQLConnection::instance().queryMany(
         "SELECT id, device_code, device_name, device_type, station_name, area_name, "
         "rated_voltage, description, ip_address, port, protocol, common_address, "
         "link_address, connect_timeout_sec, reconnect_interval_sec, enabled, sort_order "
         "FROM device WHERE enabled = 1 ORDER BY sort_order",
-        [this, &devices](MYSQL* mysql) {
+        [&devices](MYSQL* mysql) {
             MYSQL_RES* res = mysql_store_result(mysql);
             if (!res) {
                 return false;
             }
+
+            printResultRows("loadAllEnabled", res);
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(res)) != nullptr) {
@@ -61,7 +100,6 @@ bool DeviceRepository::loadAllEnabled(std::vector<DeviceConfig>& devices)
                 device.sortOrder = row[idx++] ? std::stoi(row[idx - 1]) : 0;
 
                 // 加载该设备的测点
-                loadPointsForDevice(device.id, device.points);
                 devices.push_back(device);
             }
 
@@ -69,20 +107,34 @@ bool DeviceRepository::loadAllEnabled(std::vector<DeviceConfig>& devices)
             return true;
         }
     );
+
+    if (!ok) {
+        return false;
+    }
+
+    for (std::vector<DeviceConfig>::iterator it = devices.begin(); it != devices.end(); ++it) {
+        if (!loadPointsForDevice(it->id, it->points)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool DeviceRepository::loadOne(const std::string& deviceCode, DeviceConfig& out)
 {
-    return MySQLConnection::instance().queryOne(
+    bool ok = MySQLConnection::instance().queryOne(
         "SELECT id, device_code, device_name, device_type, station_name, area_name, "
         "rated_voltage, description, ip_address, port, protocol, common_address, "
         "link_address, connect_timeout_sec, reconnect_interval_sec, enabled, sort_order "
         "FROM device WHERE device_code = '" + deviceCode + "'",
-        [this, &out](MYSQL* mysql) {
+        [&out](MYSQL* mysql) {
             MYSQL_RES* res = mysql_store_result(mysql);
             if (!res) {
                 return false;
             }
+
+            printResultRows("loadOne", res);
 
             MYSQL_ROW row = mysql_fetch_row(res);
             if (!row) {
@@ -110,12 +162,16 @@ bool DeviceRepository::loadOne(const std::string& deviceCode, DeviceConfig& out)
             out.sortOrder = row[idx++] ? std::stoi(row[idx - 1]) : 0;
 
             // 加载测点
-            loadPointsForDevice(out.id, out.points);
-
             mysql_free_result(res);
             return true;
         }
     );
+
+    if (!ok) {
+        return false;
+    }
+
+    return loadPointsForDevice(out.id, out.points);
 }
 
 int DeviceRepository::countEnabled()
@@ -128,6 +184,8 @@ int DeviceRepository::countEnabled()
             if (!res) {
                 return false;
             }
+
+            printResultRows("countEnabled", res);
 
             MYSQL_ROW row = mysql_fetch_row(res);
             if (row && row[0]) {
@@ -152,6 +210,8 @@ int DeviceRepository::countPoints(int deviceId)
                 return false;
             }
 
+            printResultRows("countPoints", res);
+
             MYSQL_ROW row = mysql_fetch_row(res);
             if (row && row[0]) {
                 count = std::stoi(row[0]);
@@ -171,12 +231,14 @@ bool DeviceRepository::loadPointsForDevice(int deviceId, std::vector<PointConfig
     return MySQLConnection::instance().queryMany(
         "SELECT id, device_id, ioa, point_code, point_name, point_type, data_type, "
         "unit, limit_high, limit_low, enabled "
-        "FROM point WHERE device_id = " + std::to_string(deviceId) + " ORDER BY sort_order",
+        "FROM point WHERE device_id = " + std::to_string(deviceId) + " ORDER BY ioa",
         [this, &points](MYSQL* mysql) {
             MYSQL_RES* res = mysql_store_result(mysql);
             if (!res) {
                 return false;
             }
+
+            printResultRows("loadPointsForDevice", res);
 
             MYSQL_ROW row;
             while ((row = mysql_fetch_row(res)) != nullptr) {
