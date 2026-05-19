@@ -96,13 +96,8 @@ bool MySQLConnection::connect()
 
     // 完全禁用 SSL（使用正确的 enum 类型）
     // SSL_MODE_DISABLED 值为 1，来自 mysql.h 中的 enum mysql_ssl_mode { SSL_MODE_DISABLED=1, ... }
-    const int ssl_mode = 1;
+    enum mysql_ssl_mode ssl_mode = SSL_MODE_DISABLED;
     mysql_options(mysql_, MYSQL_OPT_SSL_MODE, &ssl_mode);
-    // 或者同时禁用 SSL 强制
-    my_bool ssl_enforce = 0;
-    mysql_options(mysql_, MYSQL_OPT_SSL_ENFORCE, &ssl_enforce);
-    // 再加上设置 ssl 路径为 nullptr
-    mysql_ssl_set(mysql_, nullptr, nullptr, nullptr, nullptr, nullptr);
 
     // 连接到服务器
     if (!mysql_real_connect(
