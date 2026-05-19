@@ -8,6 +8,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <windows.h>
 
 #include "scada/config_defaults.hpp"
 #include "scada/protocol.hpp"
@@ -26,6 +27,9 @@ SimulatorApplication::~SimulatorApplication()
 
 int SimulatorApplication::run()
 {
+    // 设置控制台输出为UTF-8编码
+    SetConsoleOutputCP(65001);  // 65001是UTF-8的代码页
+
     running_ = true;
     std::cout << "[device-simulator] 启动（脚手架）\n"
               << "  IEC104 监听端口: " << scada::config::kDeviceToMasterPort << '\n';
