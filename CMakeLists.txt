@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.16)
 
 project(scada-demo VERSION 1.0 LANGUAGES CXX)
 
+# 强制源文件和字串字面量为 UTF-8
+# GCC/MinGW 需要显式指定，否则 UTF-8 源码中的中文会被转成系统 GBK
+# MSVC 用 /utf-8（VS2015+）
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+elseif(MSVC)
+    add_compile_options(/utf-8)
+endif()
+
 # 全项目统一 C++11（与目标岗位/现有规范一致）
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -60,12 +60,14 @@ bool DeviceConnector::connect()
     addr.sin_family = AF_INET;
     addr.sin_port = htons(static_cast<u_short>(config_.port));
 
-    if (inet_pton(AF_INET, config_.ipAddress.c_str(), &addr.sin_addr) != 1) {
+    unsigned long ip = inet_addr(config_.ipAddress.c_str());
+    if (ip == INADDR_NONE) {
         std::cerr << "[master] 无效 IP: " << config_.ipAddress << "\n";
         closesocket(sock_);
         sock_ = INVALID_SOCKET;
         return false;
     }
+    addr.sin_addr.s_addr = ip;
 
     /*
      * connect() 失败时 WSAGetLastError() 必须在 closesocket 之前调用。
