@@ -3,6 +3,8 @@ add_executable(master-server
     src/app/MasterApplication.cpp
     src/storage/MySQLConnection.cpp
     src/storage/DeviceRepository.cpp
+    src/net/DeviceConnector.cpp
+    src/pipeline/TelemetryConsumer.cpp
 )
 
 # 用户通过 CMake 变量指定 MySQL Connector/C 路径：-DMYSQL_PATH="D:/soft/mysql/mysql-connector-c-6.1.11-winx64"
@@ -90,10 +92,7 @@ if(WIN32)
 
     # 链接 Winsock 库
     target_link_libraries(master-server PRIVATE ws2_32)
-    target_compile_definitions(master-server PRIVATE
-        WIN32_LEAN_AND_MEAN
-        _WINSOCK_DEPRECATED_NO_WARNINGS
-    )
+    # WIN32_LEAN_AND_MEAN 已在根 CMakeLists 全局定义
 endif()
 
 target_compile_features(master-server PRIVATE cxx_std_11)

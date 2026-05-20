@@ -37,6 +37,11 @@ if(WIN32 AND NOT CMAKE_PREFIX_PATH)
     endforeach()
 endif()
 
+# Windows 统一预定义：避免 winsock.h / windows.h 冲突
+if(WIN32)
+    add_compile_definitions(WIN32_LEAN_AND_MEAN _WINSOCK_DEPRECATED_NO_WARNINGS)
+endif()
+
 # 子项目：common 必须先于各可执行文件
 add_subdirectory(common)
 add_subdirectory(master-server)

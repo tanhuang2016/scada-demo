@@ -1,11 +1,17 @@
 /**
  * @file   main.cpp
- * @brief  设备模拟器入口：信号处理 + SimulatorApplication
+ * @brief  设备模拟器入口：Winsock 初始化 + 信号处理 + SimulatorApplication
  */
 
 #include "app/SimulatorApplication.hpp"
 
 #include <csignal>
+#include <iostream>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 
 namespace {
 
@@ -22,6 +28,19 @@ void handleSignal(int)
 
 int main()
 {
+#ifdef _WIN32
+    /* Windows 控制台 UTF-8 */
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    /* 初始化 Winsock */
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "[device-simulator] WSAStartup 失败\n";
+        return 1;
+    }
+#endif
+
     simulator::SimulatorApplication app;
     g_app = &app;
 
@@ -29,6 +48,12 @@ int main()
     std::signal(SIGTERM, handleSignal);
 
     const int code = app.run();
+
     g_app = 0;
+
+#ifdef _WIN32
+    WSACleanup();
+#endif
+
     return code;
 }
