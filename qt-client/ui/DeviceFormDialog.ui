@@ -36,6 +36,13 @@
       <attribute name="title"><string>测点配置</string></attribute>
       <layout class="QVBoxLayout" name="pointsLayout">
        <item>
+        <layout class="QHBoxLayout" name="pointBtnLayout">
+         <item><widget class="QPushButton" name="addPointBtn"><property name="text"><string>添加测点</string></property></widget></item>
+         <item><widget class="QPushButton" name="delPointBtn"><property name="text"><string>删除选中</string></property></widget></item>
+         <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+        </layout>
+       </item>
+       <item>
         <widget class="QTableWidget" name="pointsTable">
 <!-- columnCount set in code -->
          <column><property name="text"><string>IOA</string></property></column>

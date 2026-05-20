@@ -1,12 +1,6 @@
 /**
  * @file   SimulatorApplication.cpp
- * @brief  设备模拟器实现：3 台设备独立 TCP 端口 + 独立线程并发遥测上送
- *
- * 每台设备：
- *   - 监听独立端口（RTU001/5001, RTU002/5011, RTU003/5012）
- *   - 独立线程运行 accept → send 循环
- *   - 电压/电流/开关数据各设备独立随机，互不干扰
- *
+ * @brief  设备模拟器：从 MySQL 动态加载设备 → 独立 TCP 端口 + 线程遥测
  * @module device-simulator
  */
 
@@ -17,6 +11,7 @@
 #include <chrono>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <thread>
 
 #ifdef _WIN32
@@ -24,26 +19,24 @@
 #include <ws2tcpip.h>
 #endif
 
+#include <mysql.h>
+
 #include "net/JsonTcpServer.hpp"
-#include "scada/config_defaults.hpp"
 #include "scada/json_protocol.hpp"
 #include "scada/types.hpp"
 
 namespace simulator {
 
 namespace {
-    std::mutex g_randMutex;  ///< 保护 std::rand() 多线程调用
-}  // namespace
+    std::mutex g_randMutex;
+}
 
-/**
- * @brief 单设备模拟线程的上下文
- */
 struct SimulatorApplication::DeviceThread {
     std::string deviceId;
     int port;
-    int index;  ///< 设备序号 0/1/2，用于差异化随机数据
+    int index;
     std::string label;
-    net::JsonTcpServer* server;   ///< 动态分配 — JsonTcpServer 无默认构造
+    net::JsonTcpServer* server;
     std::thread thread;
 };
 
@@ -56,6 +49,73 @@ SimulatorApplication::~SimulatorApplication()
 {
 }
 
+/*
+ * 从 MySQL 读取 device 表中所有 enabled=1 且 protocol='JSON' 的设备。
+ * 失败时回退到硬编码的 3 台设备（兼容无 MySQL 环境）。
+ */
+int SimulatorApplication::loadDevicesFromDb(std::vector<DeviceThread*>& out)
+{
+    MYSQL* mysql = mysql_init(NULL);
+    if (mysql == NULL) {
+        std::cerr << "[simulator] mysql_init 失败，使用硬编码默认设备\n";
+        return -1;
+    }
+
+    unsigned int timeout = 10;
+    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+
+    if (!mysql_real_connect(mysql, "127.0.0.1", "root", "tanhuang",
+                            "scada_demo", 3306, NULL, 0)) {
+        std::cerr << "[simulator] MySQL 连接失败: " << mysql_error(mysql)
+                  << "，使用硬编码默认设备\n";
+        mysql_close(mysql);
+        return -1;
+    }
+
+    mysql_set_character_set(mysql, "utf8mb4");
+    std::cout << "[simulator] MySQL 已连接，加载设备配置...\n";
+
+    const char* sql =
+        "SELECT device_code, port FROM device "
+        "WHERE enabled=1 AND protocol='JSON' ORDER BY sort_order";
+
+    if (mysql_query(mysql, sql) != 0) {
+        std::cerr << "[simulator] 查询失败: " << mysql_error(mysql) << "\n";
+        mysql_close(mysql);
+        return -1;
+    }
+
+    MYSQL_RES* res = mysql_store_result(mysql);
+    if (res == NULL) {
+        mysql_close(mysql);
+        return -1;
+    }
+
+    int count = 0;
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res)) != NULL) {
+        DeviceThread* dt = new DeviceThread();
+        dt->deviceId = row[0] ? row[0] : "UNKNOWN";
+        dt->port = row[1] ? std::stoi(row[1]) : 5001;
+        dt->index = count;
+
+        std::ostringstream label;
+        label << "[" << dt->deviceId << ":" << dt->port << "]";
+        dt->label = label.str();
+
+        dt->server = new net::JsonTcpServer(dt->port);
+
+        out.push_back(dt);
+        ++count;
+    }
+
+    mysql_free_result(res);
+    mysql_close(mysql);
+
+    std::cout << "[simulator] 从 MySQL 加载 " << count << " 台设备\n";
+    return count;
+}
+
 int SimulatorApplication::run()
 {
 #ifdef _WIN32
@@ -65,78 +125,81 @@ int SimulatorApplication::run()
     running_ = true;
     std::srand(static_cast<unsigned int>(std::time(NULL)));
 
-    std::cout << "[device-simulator] 启动 — 模拟 3 台设备\n"
-              << "  RTU001 → 端口 " << scada::config::kDeviceJsonPort << "\n"
-              << "  RTU002 → 端口 " << scada::config::kDeviceJsonPort2 << "\n"
-              << "  RTU003 → 端口 " << scada::config::kDeviceJsonPort3 << "\n";
+    std::cout << "[device-simulator] 启动\n";
 
-    /* 配置 3 台设备（JsonTcpServer 需动态分配——无默认构造函数） */
-    DeviceThread devices[3];
-    devices[0].deviceId = "RTU001";
-    devices[0].port = scada::config::kDeviceJsonPort;
-    devices[0].index = 0;
-    devices[0].label = "[RTU001:5001]";
-    devices[0].server = new net::JsonTcpServer(scada::config::kDeviceJsonPort);
+    /* 尝试从 MySQL 加载设备列表 */
+    std::vector<DeviceThread*> devices;
+    int count = loadDevicesFromDb(devices);
 
-    devices[1].deviceId = "RTU002";
-    devices[1].port = scada::config::kDeviceJsonPort2;
-    devices[1].index = 1;
-    devices[1].label = "[RTU002:5011]";
-    devices[1].server = new net::JsonTcpServer(scada::config::kDeviceJsonPort2);
+    /* MySQL 不可用时回退硬编码默认值 */
+    if (count <= 0) {
+        std::cout << "[device-simulator] 使用硬编码默认 3 台设备\n"
+                  << "  RTU001 → 5001, RTU002 → 5011, RTU003 → 5012\n";
+        for (int i = 0; i < 3; ++i) {
+            DeviceThread* dt = new DeviceThread();
+            dt->index = i;
+            if (i == 0) { dt->deviceId = "RTU001"; dt->port = 5001; }
+            if (i == 1) { dt->deviceId = "RTU002"; dt->port = 5011; }
+            if (i == 2) { dt->deviceId = "RTU003"; dt->port = 5012; }
+            std::ostringstream label;
+            label << "[" << dt->deviceId << ":" << dt->port << "]";
+            dt->label = label.str();
+            dt->server = new net::JsonTcpServer(dt->port);
+            devices.push_back(dt);
+        }
+        count = 3;
+    }
 
-    devices[2].deviceId = "RTU003";
-    devices[2].port = scada::config::kDeviceJsonPort3;
-    devices[2].index = 2;
-    devices[2].label = "[RTU003:5012]";
-    devices[2].server = new net::JsonTcpServer(scada::config::kDeviceJsonPort3);
+    for (int i = 0; i < count; ++i) {
+        std::cout << "  " << devices[static_cast<std::size_t>(i)]->deviceId
+                  << " → 端口 " << devices[static_cast<std::size_t>(i)]->port << "\n";
+    }
 
-    /* 启动 3 台设备的 TCP 服务端 */
-    for (int i = 0; i < 3; ++i) {
-        if (!devices[i].server->start()) {
-            std::cerr << "[device-simulator] " << devices[i].label
+    /* 启动所有设备的 TCP 服务端 */
+    for (int i = 0; i < count; ++i) {
+        DeviceThread* dt = devices[static_cast<std::size_t>(i)];
+        if (!dt->server->start()) {
+            std::cerr << "[device-simulator] " << dt->label
                       << " TCP 服务启动失败\n";
             running_ = false;
-            /* 清理已启动的服务器 */
             for (int j = 0; j < i; ++j) {
-                if (devices[j].thread.joinable()) devices[j].thread.join();
-                delete devices[j].server;
+                DeviceThread* d2 = devices[static_cast<std::size_t>(j)];
+                if (d2->thread.joinable()) d2->thread.join();
+                delete d2->server;
+                delete d2;
             }
             return 1;
         }
     }
 
-    /* 启动 3 台设备的工作线程 */
-    for (int i = 0; i < 3; ++i) {
-        devices[i].thread = std::thread(
-            &SimulatorApplication::runDeviceThread, this,
-            std::ref(devices[i]));
+    /* 启动工作线程 */
+    for (int i = 0; i < count; ++i) {
+        DeviceThread* dt = devices[static_cast<std::size_t>(i)];
+        dt->thread = std::thread(
+            &SimulatorApplication::runDeviceThread, this, std::ref(*dt));
     }
 
-    std::cout << "[device-simulator] 3 台设备全部启动，等待主站连接...\n";
+    std::cout << "[device-simulator] " << count
+              << " 台设备全部启动，等待主站连接...\n";
 
     /* 等待所有设备线程退出 */
-    for (int i = 0; i < 3; ++i) {
-        if (devices[i].thread.joinable()) {
-            devices[i].thread.join();
-        }
+    for (int i = 0; i < count; ++i) {
+        DeviceThread* dt = devices[static_cast<std::size_t>(i)];
+        if (dt->thread.joinable()) dt->thread.join();
     }
 
-    /* 停止所有 TCP 服务端 */
-    for (int i = 0; i < 3; ++i) {
-        devices[i].server->stop();
-        delete devices[i].server;
+    /* 清理 */
+    for (int i = 0; i < count; ++i) {
+        DeviceThread* dt = devices[static_cast<std::size_t>(i)];
+        dt->server->stop();
+        delete dt->server;
+        delete dt;
     }
 
     std::cout << "[device-simulator] 已停止\n";
     return 0;
 }
 
-/*
- * 单设备工作线程：等待主站连接 → 生成遥测 → 发送 → 睡眠循环。
- *
- * 每台设备独立运行此函数，互不干扰。
- * 延迟 100ms * deviceIndex 使设备启动错开，避免同时发送数据包。
- */
 void SimulatorApplication::runDeviceThread(DeviceThread& dt)
 {
     scada::device_protocol::JsonProtocol jsonProto;
@@ -147,19 +210,11 @@ void SimulatorApplication::runDeviceThread(DeviceThread& dt)
     std::cout << dt.label << " 线程启动\n";
 
     while (running_) {
-        /* 等待主站连接 */
         if (!dt.server->hasClient()) {
             dt.server->waitForClient(1000);
             continue;
         }
 
-        /* 生成随机遥测（std::rand 非线程安全，互斥锁保护）
-         *
-         * 每台设备按序号偏移基准值，使 3 组数据可分辨：
-         *   RTU001(index=0): 基准 220V / 10A
-         *   RTU002(index=1): 基准 222V / 12A
-         *   RTU003(index=2): 基准 224V /  8A
-         */
         {
             std::lock_guard<std::mutex> lock(g_randMutex);
             telem.voltage = (220.0 + dt.index * 2.0)
@@ -179,7 +234,6 @@ void SimulatorApplication::runDeviceThread(DeviceThread& dt)
             std::cout << dt.label << " >> " << frame;
         }
 
-        /* 1 秒间隔，分片检测 running_ */
         for (int i = 0; i < 10 && running_; ++i) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

@@ -76,6 +76,12 @@ public:
     /** @brief 更新测点（主要用于修改限值） */
     bool updatePoint(const PointInfo& p);
 
+    /** @brief 插入新测点，返回新 ID */
+    int insertPoint(int deviceId, const PointInfo& p);
+
+    /** @brief 删除测点 */
+    bool deletePoint(int pointId);
+
 private:
     MYSQL* mysql_;
     bool connected_;

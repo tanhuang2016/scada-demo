@@ -1,6 +1,6 @@
 /**
  * @file   MainWindow.cpp
- * @brief  主窗口：标签页（监控 + 设备管理）+ MySQL + 信号槽
+ * @brief  主窗口：动态监控卡片 + 设备管理 + MySQL
  * @module qt-client
  */
 
@@ -32,31 +32,24 @@ MainWindow::MainWindow(QWidget* parent)
         statusBar()->showMessage(tr("MySQL 已连接"));
     }
 
-    /* Tab 1：实时监控 — 3 张设备卡片 */
-    const char* deviceCodes[3] = { "RTU001", "RTU002", "RTU003" };
-    for (int i = 0; i < 3; ++i) {
-        cards_[i] = new MonitorPage(this);
-        cards_[i]->setDeviceCode(QString::fromUtf8(deviceCodes[i]));
-        ui->cardsLayout->addWidget(cards_[i]);
-    }
+    /* 主站 TCP 客户端（先创建，卡片创建时连接信号） */
+    client_ = new MasterClient(this);
+
+    /*
+     * Tab 1：实时监控 — 从 MySQL 动态加载设备列表创建卡片
+     *
+     * 卡片数量由 MySQL device 表中 enabled=1 的记录数决定。
+     * 设备增删后调用 refreshMonitorCards() 重建卡片。
+     */
+    refreshMonitorCards();
 
     /* Tab 2：设备管理 */
     managePage_ = new DeviceManagePage(deviceMgr_, this);
     ui->manageLayout->addWidget(managePage_);
 
-    /* 主站 TCP 客户端 */
-    client_ = new MasterClient(this);
-
-    for (int i = 0; i < 3; ++i) {
-        QObject::connect(client_, SIGNAL(telemetryReceived(scada::Telemetry)),
-                         cards_[i], SLOT(onTelemetry(scada::Telemetry)));
-        QObject::connect(client_, SIGNAL(connectionStateChanged(bool)),
-                         cards_[i], SLOT(onConnectionStateChanged(bool)));
-        QObject::connect(client_, SIGNAL(deviceOnline(QString)),
-                         cards_[i], SLOT(onDeviceOnline(QString)));
-        QObject::connect(client_, SIGNAL(deviceOffline(QString)),
-                         cards_[i], SLOT(onDeviceOffline(QString)));
-    }
+    /* 设备增删改后自动刷新监控卡片 */
+    QObject::connect(managePage_, SIGNAL(devicesChanged()),
+                     this, SLOT(refreshMonitorCards()));
 
     client_->connectToMaster(QString::fromUtf8("127.0.0.1"),
                              scada::config::kMasterToUiPort);
@@ -65,4 +58,54 @@ MainWindow::MainWindow(QWidget* parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+/*
+ * 从 MySQL 加载启用设备列表，动态创建监控卡片。
+ *
+ * 先清除所有旧卡片，再按设备列表重建。
+ * 每张卡片连接 MasterClient 的遥测/在线/离线信号。
+ */
+void MainWindow::refreshMonitorCards()
+{
+    /* 清除旧卡片 */
+    for (QVector<MonitorPage*>::iterator it = cards_.begin();
+         it != cards_.end(); ++it) {
+        ui->cardsLayout->removeWidget(*it);
+        delete *it;
+    }
+    cards_.clear();
+
+    if (deviceMgr_ == NULL) return;
+
+    /* 从 MySQL 加载设备列表 */
+    std::vector<DeviceInfo> devices;
+    deviceMgr_->loadAllDevices(devices);
+
+    for (std::vector<DeviceInfo>::iterator it = devices.begin();
+         it != devices.end(); ++it) {
+        if (!it->enabled) continue;  // 只显示启用的设备
+
+        MonitorPage* card = new MonitorPage(this);
+        card->setDeviceCode(QString::fromStdString(it->deviceCode));
+        connectCard(card);
+        ui->cardsLayout->addWidget(card);
+        cards_.append(card);
+    }
+}
+
+/*
+ * 将一张卡片连接到 MasterClient 的四个信号。
+ * 每个信号都发给所有卡片，卡片内部按 deviceCode 过滤。
+ */
+void MainWindow::connectCard(MonitorPage* card)
+{
+    QObject::connect(client_, SIGNAL(telemetryReceived(scada::Telemetry)),
+                     card, SLOT(onTelemetry(scada::Telemetry)));
+    QObject::connect(client_, SIGNAL(connectionStateChanged(bool)),
+                     card, SLOT(onConnectionStateChanged(bool)));
+    QObject::connect(client_, SIGNAL(deviceOnline(QString)),
+                     card, SLOT(onDeviceOnline(QString)));
+    QObject::connect(client_, SIGNAL(deviceOffline(QString)),
+                     card, SLOT(onDeviceOffline(QString)));
 }

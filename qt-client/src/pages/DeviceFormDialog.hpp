@@ -31,6 +31,12 @@ public:
     /** @brief 获取修改后的测点列表 */
     std::vector<PointInfo> modifiedPoints() const;
 
+    /** @brief 获取待删除的测点 ID 列表 */
+    std::vector<int> deletedPointIds() const { return deletedPointIds_; }
+
+    /** @brief 获取测点表格中已新增但尚未落库的行（id==0） */
+    std::vector<PointInfo> newPoints() const;
+
     /** @brief 设备 DB ID（编辑模式有效） */
     int deviceId() const { return deviceId_; }
 
@@ -39,6 +45,8 @@ public:
 
 private slots:
     void onSave();
+    void onAddPoint();
+    void onDeletePoint();
 
 private:
     void loadPointsToTable(DeviceManager* mgr, int deviceId);
@@ -48,4 +56,5 @@ private:
     int deviceId_;
     bool isNew_;
     std::vector<PointInfo> originalPoints_;
+    std::vector<int> deletedPointIds_;  ///< 待删除的测点 ID 列表
 };

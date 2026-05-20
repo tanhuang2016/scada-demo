@@ -23,6 +23,10 @@ public:
     /** @brief 加载设备列表到表格 */
     void refreshTable();
 
+signals:
+    /** @brief 设备配置已变更（增删改后触发，通知 MainWindow 刷新卡片） */
+    void devicesChanged();
+
 private slots:
     void onAdd();
     void onEdit();

@@ -2,7 +2,7 @@
 
 /**
  * @file   SimulatorApplication.hpp
- * @brief  设备模拟器应用：3 台设备独立 TCP 服务端 + 周期 JSON 遥测上送
+ * @brief  设备模拟器：从 MySQL 动态加载设备列表 + 独立 TCP 服务端
  * @module device-simulator
  */
 
@@ -12,12 +12,6 @@
 
 namespace simulator {
 
-/**
- * @brief 模拟器进程入口，模拟 3 台 RTU 设备并发周期上送遥测
- *
- * 每台设备独立 TCP 端口 + 独立线程：
- *   RTU001 → 5001, RTU002 → 5011, RTU003 → 5012
- */
 class SimulatorApplication {
 public:
     SimulatorApplication();
@@ -28,6 +22,11 @@ public:
 
 private:
     struct DeviceThread;
+
+    /** @brief 从 MySQL 加载启用设备列表，失败则用硬编码默认值 */
+    int loadDevicesFromDb(std::vector<DeviceThread*>& out);
+
+    /** @brief 单设备线程 */
     void runDeviceThread(DeviceThread& dt);
 
     SimulatorApplication(const SimulatorApplication&);

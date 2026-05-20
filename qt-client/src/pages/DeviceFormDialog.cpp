@@ -1,6 +1,6 @@
 /**
  * @file   DeviceFormDialog.cpp
- * @brief  设备编辑对话框实现
+ * @brief  设备编辑对话框——基本信息 + 测点增删改
  * @module qt-client
  */
 
@@ -22,6 +22,8 @@ DeviceFormDialog::DeviceFormDialog(QWidget* parent)
 
     QObject::connect(ui->saveButton, SIGNAL(clicked()), this, SLOT(onSave()));
     QObject::connect(ui->cancelButton, SIGNAL(clicked()), this, SLOT(reject()));
+    QObject::connect(ui->addPointBtn, SIGNAL(clicked()), this, SLOT(onAddPoint()));
+    QObject::connect(ui->delPointBtn, SIGNAL(clicked()), this, SLOT(onDeletePoint()));
 }
 
 DeviceFormDialog::~DeviceFormDialog()
@@ -34,6 +36,8 @@ void DeviceFormDialog::setDevice(const DeviceInfo& d, DeviceManager* mgr, int de
     isNew_ = false;
     deviceId_ = deviceId;
     mgr_ = mgr;
+    originalPoints_.clear();
+    deletedPointIds_.clear();
 
     ui->editCode->setText(QString::fromStdString(d.deviceCode));
     ui->editName->setText(QString::fromStdString(d.deviceName));
@@ -55,6 +59,9 @@ void DeviceFormDialog::setNewMode()
 {
     isNew_ = true;
     deviceId_ = 0;
+    originalPoints_.clear();
+    deletedPointIds_.clear();
+    ui->pointsTable->setRowCount(0);
 }
 
 void DeviceFormDialog::onSave()
@@ -97,21 +104,98 @@ std::vector<PointInfo> DeviceFormDialog::modifiedPoints() const
             p = originalPoints_[static_cast<std::size_t>(r)];
         }
 
-        /* 读取上限 */
+        /* 读取各列（新增行 originalPoints_ 无对应条目，id==0） */
+        QTableWidgetItem* item1 = ui->pointsTable->item(r, 0);
+        if (item1 != NULL) p.ioa = item1->text().toInt();
+        QTableWidgetItem* item2 = ui->pointsTable->item(r, 1);
+        if (item2 != NULL) p.pointCode = item2->text().toStdString();
+        QTableWidgetItem* item3 = ui->pointsTable->item(r, 2);
+        if (item3 != NULL) p.pointName = item3->text().toStdString();
+        QTableWidgetItem* item4 = ui->pointsTable->item(r, 3);
+        if (item4 != NULL) p.pointType = item4->text().toStdString();
         QTableWidgetItem* hi = ui->pointsTable->item(r, 4);
-        if (hi != NULL) {
-            p.limitHigh = hi->text().toDouble();
-        }
-
-        /* 读取下限 */
+        if (hi != NULL) p.limitHigh = hi->text().toDouble();
         QTableWidgetItem* lo = ui->pointsTable->item(r, 5);
-        if (lo != NULL) {
-            p.limitLow = lo->text().toDouble();
-        }
+        if (lo != NULL) p.limitLow = lo->text().toDouble();
 
         result.push_back(p);
     }
     return result;
+}
+
+std::vector<PointInfo> DeviceFormDialog::newPoints() const
+{
+    std::vector<PointInfo> result;
+    int rows = ui->pointsTable->rowCount();
+
+    /* id==0 的行即为新增 */
+    for (int r = 0; r < rows; ++r) {
+        if (r < static_cast<int>(originalPoints_.size())) {
+            if (originalPoints_[static_cast<std::size_t>(r)].id != 0) continue;
+        }
+        PointInfo p;
+        QTableWidgetItem* item1 = ui->pointsTable->item(r, 0);
+        if (item1 != NULL) p.ioa = item1->text().toInt();
+        QTableWidgetItem* item2 = ui->pointsTable->item(r, 1);
+        if (item2 != NULL) p.pointCode = item2->text().toStdString();
+        QTableWidgetItem* item3 = ui->pointsTable->item(r, 2);
+        if (item3 != NULL) p.pointName = item3->text().toStdString();
+        QTableWidgetItem* item4 = ui->pointsTable->item(r, 3);
+        if (item4 != NULL) p.pointType = item4->text().toStdString();
+        QTableWidgetItem* hi = ui->pointsTable->item(r, 4);
+        if (hi != NULL) p.limitHigh = hi->text().toDouble();
+        QTableWidgetItem* lo = ui->pointsTable->item(r, 5);
+        if (lo != NULL) p.limitLow = lo->text().toDouble();
+        if (!p.pointCode.empty()) {
+            result.push_back(p);
+        }
+    }
+    return result;
+}
+
+/*
+ * 添加一行空白测点。
+ * 用户可编辑 IOA/编码/名称/类型/限值，保存时写入 MySQL。
+ */
+void DeviceFormDialog::onAddPoint()
+{
+    int r = ui->pointsTable->rowCount();
+    ui->pointsTable->setRowCount(r + 1);
+    /* 默认值 */
+    ui->pointsTable->setItem(r, 0, new QTableWidgetItem(QString::number(4000 + r)));
+    ui->pointsTable->setItem(r, 1, new QTableWidgetItem(QString::fromUtf8("NEW")));
+    ui->pointsTable->setItem(r, 2, new QTableWidgetItem(QString::fromUtf8("新测点")));
+    ui->pointsTable->setItem(r, 3, new QTableWidgetItem(QString::fromUtf8("YC")));
+    ui->pointsTable->setItem(r, 4, new QTableWidgetItem(QString::number(100.0, 'f', 2)));
+    ui->pointsTable->setItem(r, 5, new QTableWidgetItem(QString::number(0.0, 'f', 2)));
+}
+
+/*
+ * 删除选中行。
+ * 如果行对应的测点已在数据库中（originalPoints_ 有记录），加入 deletedPointIds_ 待删除。
+ */
+void DeviceFormDialog::onDeletePoint()
+{
+    int r = ui->pointsTable->currentRow();
+    if (r < 0) {
+        QMessageBox::information(this, "提示", "请先选择一个测点");
+        return;
+    }
+
+    /* 如果是数据库已有测点，标记待删除 */
+    if (r < static_cast<int>(originalPoints_.size())) {
+        int pid = originalPoints_[static_cast<std::size_t>(r)].id;
+        if (pid > 0) {
+            deletedPointIds_.push_back(pid);
+        }
+    }
+
+    /* 从 originalPoints_ 中移除对应项 */
+    if (r < static_cast<int>(originalPoints_.size())) {
+        originalPoints_.erase(originalPoints_.begin() + r);
+    }
+
+    ui->pointsTable->removeRow(r);
 }
 
 void DeviceFormDialog::loadPointsToTable(DeviceManager* mgr, int deviceId)
@@ -135,7 +219,6 @@ void DeviceFormDialog::loadPointsToTable(DeviceManager* mgr, int deviceId)
             new QTableWidgetItem(QString::fromStdString(p.pointName)));
         ui->pointsTable->setItem(r, 3,
             new QTableWidgetItem(QString::fromStdString(p.pointType)));
-        /* 限值可编辑 */
         QTableWidgetItem* hi = new QTableWidgetItem(
             QString::number(p.limitHigh, 'f', 2));
         ui->pointsTable->setItem(r, 4, hi);

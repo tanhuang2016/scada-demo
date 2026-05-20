@@ -74,7 +74,27 @@ void DeviceManagePage::onAdd()
 
     DeviceInfo info = dlg.deviceInfo();
     if (mgr_ != NULL && mgr_->insertDevice(info)) {
+        /* 获取新插入设备的 ID（通过查询最新记录） */
+        std::vector<DeviceInfo> all;
+        mgr_->loadAllDevices(all);
+        int newId = 0;
+        for (std::vector<DeviceInfo>::iterator it = all.begin();
+             it != all.end(); ++it) {
+            if (it->deviceCode == info.deviceCode) {
+                newId = it->id;
+                break;
+            }
+        }
+        /* 插入对话框中的测点（如有） */
+        if (newId > 0) {
+            std::vector<PointInfo> newPts = dlg.newPoints();
+            for (std::vector<PointInfo>::iterator it = newPts.begin();
+                 it != newPts.end(); ++it) {
+                mgr_->insertPoint(newId, *it);
+            }
+        }
         refreshTable();
+        emit devicesChanged();
         notifyMasterReload();
     } else {
         QMessageBox::warning(this, "错误", "新增设备失败");
@@ -97,13 +117,28 @@ void DeviceManagePage::onEdit()
 
     DeviceInfo info = dlg.deviceInfo();
     if (mgr_ != NULL && mgr_->updateDevice(info)) {
-        /* 保存测点限值修改 */
+        /* 删除已移除的测点 */
+        std::vector<int> delIds = dlg.deletedPointIds();
+        for (std::vector<int>::iterator it = delIds.begin();
+             it != delIds.end(); ++it) {
+            mgr_->deletePoint(*it);
+        }
+        /* 更新已有测点（限值等） */
         std::vector<PointInfo> pts = dlg.modifiedPoints();
         for (std::vector<PointInfo>::iterator it = pts.begin();
              it != pts.end(); ++it) {
-            mgr_->updatePoint(*it);
+            if (it->id > 0) {
+                mgr_->updatePoint(*it);
+            }
+        }
+        /* 插入新增测点 */
+        std::vector<PointInfo> newPts = dlg.newPoints();
+        for (std::vector<PointInfo>::iterator it = newPts.begin();
+             it != newPts.end(); ++it) {
+            mgr_->insertPoint(d.id, *it);
         }
         refreshTable();
+        emit devicesChanged();
         notifyMasterReload();
     } else {
         QMessageBox::warning(this, "错误", "更新设备失败");
@@ -127,6 +162,7 @@ void DeviceManagePage::onDelete()
 
     if (mgr_ != NULL && mgr_->deleteDevice(d.id)) {
         refreshTable();
+        emit devicesChanged();
         notifyMasterReload();
     } else {
         QMessageBox::warning(this, "错误", "删除失败");

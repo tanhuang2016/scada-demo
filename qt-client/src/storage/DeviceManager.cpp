@@ -192,3 +192,31 @@ bool DeviceManager::updatePoint(const PointInfo& p)
         << " WHERE id=" << p.id;
     return mysql_query(mysql_, sql.str().c_str()) == 0;
 }
+
+int DeviceManager::insertPoint(int deviceId, const PointInfo& p)
+{
+    if (!connected_) return -1;
+    std::ostringstream sql;
+    sql << "INSERT INTO point (device_id, ioa, point_code, point_name, "
+        << "point_type, data_type, unit, limit_high, limit_low, enabled) VALUES ("
+        << deviceId << ","
+        << p.ioa << ","
+        << "'" << p.pointCode << "',"
+        << "'" << p.pointName << "',"
+        << "'" << p.pointType << "',"
+        << "'" << p.dataType << "',"
+        << "'" << p.unit << "',"
+        << p.limitHigh << ","
+        << p.limitLow << ","
+        << (p.enabled ? 1 : 0) << ")";
+    if (mysql_query(mysql_, sql.str().c_str()) != 0) return -1;
+    return static_cast<int>(mysql_insert_id(mysql_));
+}
+
+bool DeviceManager::deletePoint(int pointId)
+{
+    if (!connected_) return false;
+    std::ostringstream sql;
+    sql << "DELETE FROM point WHERE id=" << pointId;
+    return mysql_query(mysql_, sql.str().c_str()) == 0;
+}
