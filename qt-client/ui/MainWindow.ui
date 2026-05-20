@@ -2,28 +2,25 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1100</width>
-    <height>500</height>
-   </rect>
-  </property>
-  <property name="windowTitle">
-   <string>SCADA Demo — 实时监控（3 设备）</string>
-  </property>
+  <property name="geometry"><rect><x>0</x><y>0</y><width>1100</width><height>550</height></rect></property>
+  <property name="windowTitle"><string>SCADA Demo</string></property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="mainLayout">
     <item>
-     <layout class="QHBoxLayout" name="cardsLayout">
-      <property name="spacing"><number>10</number></property>
-      <property name="leftMargin"><number>10</number></property>
-      <property name="rightMargin"><number>10</number></property>
-      <property name="topMargin"><number>10</number></property>
-      <property name="bottomMargin"><number>10</number></property>
-      <!-- 三列卡片由代码动态添加到 cardsLayout -->
-     </layout>
+     <widget class="QTabWidget" name="mainTabs">
+      <!-- Tab 1: 实时监控（代码中添加 3 张卡片） -->
+      <widget class="QWidget" name="monitorTab">
+       <attribute name="title"><string>实时监控</string></attribute>
+       <layout class="QHBoxLayout" name="cardsLayout">
+        <property name="spacing"><number>10</number></property>
+       </layout>
+      </widget>
+      <!-- Tab 2: 设备管理（代码中添加 DeviceManagePage） -->
+      <widget class="QWidget" name="manageTab">
+       <attribute name="title"><string>设备管理</string></attribute>
+       <layout class="QVBoxLayout" name="manageLayout"/>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>

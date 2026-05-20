@@ -1,44 +1,52 @@
 /**
  * @file   MainWindow.cpp
- * @brief  主窗口：创建 3 卡片 + MasterClient，连接信号槽
+ * @brief  主窗口：标签页（监控 + 设备管理）+ MySQL + 信号槽
  * @module qt-client
  */
 
 #include "MainWindow.hpp"
-
 #include "ui_MainWindow.h"
 
 #include <QVBoxLayout>
 
 #include "net/MasterClient.hpp"
+#include "pages/DeviceManagePage.hpp"
 #include "pages/MonitorPage.hpp"
+#include "storage/DeviceManager.hpp"
 #include "scada/config_defaults.hpp"
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , deviceMgr_(NULL)
     , client_(NULL)
+    , managePage_(NULL)
 {
     ui->setupUi(this);
 
-    /* 创建 3 张设备监控卡片，添加到 cardsLayout（水平布局） */
-    const char* deviceCodes[3] = { "RTU001", "RTU002", "RTU003" };
+    /* 初始化 MySQL 连接 */
+    deviceMgr_ = new DeviceManager();
+    if (!deviceMgr_->initialize("127.0.0.1", 3306, "root", "tanhuang", "scada_demo")) {
+        statusBar()->showMessage(tr("MySQL 连接失败 — 设备管理不可用"));
+    } else {
+        statusBar()->showMessage(tr("MySQL 已连接"));
+    }
 
+    /* Tab 1：实时监控 — 3 张设备卡片 */
+    const char* deviceCodes[3] = { "RTU001", "RTU002", "RTU003" };
     for (int i = 0; i < 3; ++i) {
         cards_[i] = new MonitorPage(this);
         cards_[i]->setDeviceCode(QString::fromUtf8(deviceCodes[i]));
         ui->cardsLayout->addWidget(cards_[i]);
     }
 
-    /* 创建主站 TCP 客户端 */
+    /* Tab 2：设备管理 */
+    managePage_ = new DeviceManagePage(deviceMgr_, this);
+    ui->manageLayout->addWidget(managePage_);
+
+    /* 主站 TCP 客户端 */
     client_ = new MasterClient(this);
 
-    /*
-     * 信号槽连接（旧式 SIGNAL/SLOT 宏，兼容自定义类型 scada::Telemetry）：
-     *   telemetryReceived → 所有卡片（MonitorPage 内部按 deviceId 过滤）
-     *   connectionStateChanged → 所有卡片（主站→Qt 链路）
-     *   deviceOnline / deviceOffline → 所有卡片（单设备在线/离线，按 deviceId 过滤）
-     */
     for (int i = 0; i < 3; ++i) {
         QObject::connect(client_, SIGNAL(telemetryReceived(scada::Telemetry)),
                          cards_[i], SLOT(onTelemetry(scada::Telemetry)));
@@ -50,11 +58,8 @@ MainWindow::MainWindow(QWidget* parent)
                          cards_[i], SLOT(onDeviceOffline(QString)));
     }
 
-    /* 连接主站 5002 推送端口 */
     client_->connectToMaster(QString::fromUtf8("127.0.0.1"),
                              scada::config::kMasterToUiPort);
-
-    statusBar()->showMessage(tr("就绪 — 监控 3 台设备"));
 }
 
 MainWindow::~MainWindow()

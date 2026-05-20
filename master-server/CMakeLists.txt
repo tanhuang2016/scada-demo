@@ -4,6 +4,7 @@ add_executable(master-server
     src/storage/MySQLConnection.cpp
     src/storage/DeviceRepository.cpp
     src/net/DeviceConnector.cpp
+    src/net/ControlListener.cpp
     src/pipeline/TelemetryConsumer.cpp
     src/push/UiBroadcaster.cpp
 )
