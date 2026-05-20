@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>HistoryChartPage</class>
+ <widget class="QWidget" name="HistoryChartPage">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>900</width><height>500</height></rect></property>
+  <property name="windowTitle"><string>历史曲线</string></property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="toolLayout">
+     <item><widget class="QLabel" name="lblDevice"><property name="text"><string>设备</string></property></widget></item>
+     <item><widget class="QComboBox" name="deviceCombo"/></item>
+     <item><widget class="QLabel" name="lblRange"><property name="text"><string>时间范围</string></property></widget></item>
+     <item><widget class="QComboBox" name="rangeCombo">
+      <item><property name="text"><string>最近 1 小时</string></property></item>
+      <item><property name="text"><string>最近 24 小时</string></property></item>
+      <item><property name="text"><string>最近 7 天</string></property></item>
+     </widget></item>
+     <item><widget class="QPushButton" name="queryButton"><property name="text"><string>查询</string></property></widget></item>
+     <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="chartContainer" native="true">
+     <layout class="QVBoxLayout" name="chartLayout"/>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+</ui>

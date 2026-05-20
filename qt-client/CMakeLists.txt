@@ -2,10 +2,18 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# 告诉 AUTOUIC 在哪里查找 .ui 文件
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
 
 find_package(Qt5 REQUIRED COMPONENTS Core Widgets Network)
+
+# Qt Charts 可选（可能未安装）
+find_package(Qt5Charts QUIET)
+if(Qt5Charts_FOUND)
+    set(HAS_QT_CHARTS TRUE)
+    message(STATUS "qt-client: Qt Charts found")
+else()
+    message(STATUS "qt-client: Qt Charts NOT found - history chart disabled")
+endif()
 
 add_executable(qt-client
     src/main.cpp
@@ -19,22 +27,34 @@ add_executable(qt-client
     src/pages/DeviceManagePage.hpp
     src/pages/DeviceFormDialog.cpp
     src/pages/DeviceFormDialog.hpp
-    src/storage/DeviceManager.cpp
-    src/storage/DeviceManager.hpp
-    ui/MainWindow.ui
+    src/pages/LoginDialog.cpp
+    src/pages/LoginDialog.hpp
     src/pages/OperationLogPage.cpp
     src/pages/OperationLogPage.hpp
     src/pages/AlarmPage.cpp
     src/pages/AlarmPage.hpp
+    src/storage/DeviceManager.cpp
+    src/storage/DeviceManager.hpp
+    ui/MainWindow.ui
     ui/MonitorPage.ui
     ui/DeviceManagePage.ui
     ui/DeviceFormDialog.ui
+    ui/LoginDialog.ui
     ui/OperationLogPage.ui
     ui/AlarmPage.ui
 )
 
-# MySQL 路径发现（与 master-server 相同的逻辑）
-# 优先使用用户指定的 MYSQL_PATH
+# HistoryChartPage 仅在 Qt Charts 可用时编译
+if(HAS_QT_CHARTS)
+    target_sources(qt-client PRIVATE
+        src/pages/HistoryChartPage.cpp
+        src/pages/HistoryChartPage.hpp
+        ui/HistoryChartPage.ui
+    )
+    target_compile_definitions(qt-client PRIVATE HAS_QT_CHARTS)
+endif()
+
+# MySQL 路径发现
 if(DEFINED MYSQL_PATH)
     if(EXISTS "${MYSQL_PATH}/include/mysql.h")
         set(QT_MYSQL_INCLUDE_DIRS "${MYSQL_PATH}/include")
@@ -45,7 +65,6 @@ if(DEFINED MYSQL_PATH)
         set(QT_MYSQL_LIBRARIES "${MYSQL_PATH}/lib/libmysql.lib")
     endif()
 else()
-    # 尝试常见位置
     set(MYSQL_PATHS
         "${CMAKE_SOURCE_DIR}/external/mysql"
         "D:/soft/mysql/mysql-connector-c-6.1.11-winx64"
@@ -75,7 +94,10 @@ target_link_libraries(qt-client PRIVATE
     Qt5::Network
 )
 
-# 链接 MySQL（如果找到）
+if(HAS_QT_CHARTS)
+    target_link_libraries(qt-client PRIVATE Qt5::Charts)
+endif()
+
 if(DEFINED QT_MYSQL_LIBRARIES)
     target_link_libraries(qt-client PRIVATE ${QT_MYSQL_LIBRARIES})
     target_include_directories(qt-client PRIVATE ${QT_MYSQL_INCLUDE_DIRS})
@@ -84,7 +106,7 @@ if(DEFINED QT_MYSQL_LIBRARIES)
     endif()
     message(STATUS "qt-client: MySQL found at ${QT_MYSQL_INCLUDE_DIRS}")
 else()
-    message(WARNING "qt-client: MySQL not found - device management page will not compile")
+    message(WARNING "qt-client: MySQL not found")
 endif()
 
 target_compile_features(qt-client PRIVATE cxx_std_11)
@@ -101,19 +123,13 @@ if(WIN32)
     find_program(WINDEPLOYQT_EXECUTABLE
         NAMES windeployqt
         PATHS ${QT_BIN_DIR}
-        DOC "Qt deployment tool for Windows"
     )
-
     if(WINDEPLOYQT_EXECUTABLE)
         add_custom_command(TARGET qt-client POST_BUILD
             COMMAND ${WINDEPLOYQT_EXECUTABLE}
-                --no-translations
-                --no-system-d3d-compiler
-                --no-opengl-sw
+                --no-translations --no-system-d3d-compiler --no-opengl-sw
                 $<TARGET_FILE:qt-client>
             COMMENT "Deploying Qt dependencies..."
         )
-    else()
-        message(WARNING "windeployqt not found.")
     endif()
 endif()

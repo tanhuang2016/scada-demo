@@ -11,6 +11,7 @@
 
 #include "scada/types.hpp"
 #include "pipeline/AlarmEngine.hpp"
+#include "storage/TelemetryRecorder.hpp"
 
 namespace master {
 namespace push {
@@ -48,6 +49,7 @@ public:
 private:
     push::UiBroadcaster* broadcaster_;
     AlarmEngine alarmEngine_;
+    storage::TelemetryRecorder recorder_;
     std::map<std::string, bool> onlineMap_;
 };
 

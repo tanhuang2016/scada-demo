@@ -30,6 +30,11 @@
        <attribute name="title"><string>告警列表</string></attribute>
        <layout class="QVBoxLayout" name="alarmLayout"/>
       </widget>
+      <!-- Tab 5: 历史曲线 -->
+      <widget class="QWidget" name="historyTab">
+       <attribute name="title"><string>历史曲线</string></attribute>
+       <layout class="QVBoxLayout" name="historyLayout"/>
+      </widget>
      </widget>
     </item>
    </layout>

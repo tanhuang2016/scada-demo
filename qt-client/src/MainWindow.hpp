@@ -13,6 +13,7 @@ namespace Ui { class MainWindow; }
 class AlarmPage;
 class DeviceManager;
 class DeviceManagePage;
+class HistoryChartPage;
 class MasterClient;
 class MonitorPage;
 class OperationLogPage;

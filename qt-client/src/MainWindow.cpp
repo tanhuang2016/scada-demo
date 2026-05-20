@@ -12,6 +12,9 @@
 #include "net/MasterClient.hpp"
 #include "pages/DeviceManagePage.hpp"
 #include "pages/AlarmPage.hpp"
+#ifdef HAS_QT_CHARTS
+#include "pages/HistoryChartPage.hpp"
+#endif
 #include "pages/MonitorPage.hpp"
 #include "pages/OperationLogPage.hpp"
 #include "storage/DeviceManager.hpp"
@@ -57,6 +60,13 @@ MainWindow::MainWindow(QWidget* parent)
     /* Tab 4：告警列表 */
     AlarmPage* alarmPage = new AlarmPage(deviceMgr_->getRaw(), this);
     ui->alarmLayout->addWidget(alarmPage);
+
+    /* Tab 5：历史曲线（需要 Qt Charts） */
+#ifdef HAS_QT_CHARTS
+    HistoryChartPage* historyPage = new HistoryChartPage(
+        deviceMgr_->getRaw(), this);
+    ui->historyLayout->addWidget(historyPage);
+#endif
     ui->manageLayout->addWidget(managePage_);
 
     /* 设备增删改后自动刷新监控卡片 */

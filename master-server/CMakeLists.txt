@@ -3,6 +3,7 @@ add_executable(master-server
     src/app/MasterApplication.cpp
     src/storage/MySQLConnection.cpp
     src/storage/DeviceRepository.cpp
+    src/storage/TelemetryRecorder.cpp
     src/net/DeviceConnector.cpp
     src/net/ControlListener.cpp
     src/pipeline/TelemetryConsumer.cpp

@@ -70,6 +70,9 @@ void TelemetryConsumer::onTelemetry(scada::Telemetry& telemetry)
         std::cout << "[状态] " << deviceCode << " 上线\n";
     }
 
+    /* 写入 MySQL 历史库 */
+    recorder_.record(telemetry);
+
     /* 推送 UPDATE 帧到 Qt（alarm 字段已设置） */
     broadcaster_->broadcast(telemetry);
 }
