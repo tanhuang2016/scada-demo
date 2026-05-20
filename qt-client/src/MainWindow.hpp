@@ -2,7 +2,7 @@
 
 /**
  * @file   MainWindow.hpp
- * @brief  Qt 主窗口——持有实时监控页和主站 TCP 客户端
+ * @brief  Qt 主窗口——3 列设备监控卡片 + 主站 TCP 客户端
  * @module qt-client
  */
 
@@ -15,14 +15,6 @@ class MainWindow;
 class MasterClient;
 class MonitorPage;
 
-/**
- * @brief SCADA Qt 客户端主窗口
- *
- * 构造时：
- *   1. 创建 MasterClient → 连接主站 5002 端口（自动重连）
- *   2. 创建 MonitorPage → 添加到 pageContainer 容器
- *   3. 连接 MasterClient 信号到 MonitorPage 槽
- */
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -33,5 +25,5 @@ public:
 private:
     Ui::MainWindow* ui;
     MasterClient* client_;
-    MonitorPage* monitorPage_;
+    MonitorPage* cards_[3];
 };

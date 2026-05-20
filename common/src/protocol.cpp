@@ -136,5 +136,46 @@ bool decodeUpdate(const std::string& line, Telemetry& out)
     return true;
 }
 
+// ========== 主站 → Qt 设备状态通知 ==========
+
+namespace {
+
+const char kOfflinePrefix[] = "OFFLINE";
+const char kOnlinePrefix[] = "ONLINE";
+
+}  // namespace
+
+std::string encodeOffline(const std::string& deviceCode)
+{
+    std::ostringstream oss;
+    oss << kOfflinePrefix << kDelimiter << deviceCode;
+    return oss.str();
+}
+
+std::string encodeOnline(const std::string& deviceCode)
+{
+    std::ostringstream oss;
+    oss << kOnlinePrefix << kDelimiter << deviceCode;
+    return oss.str();
+}
+
+bool decodeOffline(const std::string& line, std::string& deviceCode)
+{
+    if (line.size() < 9 || line.compare(0, 7, kOfflinePrefix) != 0 || line[7] != kDelimiter) {
+        return false;
+    }
+    deviceCode = line.substr(8);
+    return !deviceCode.empty();
+}
+
+bool decodeOnline(const std::string& line, std::string& deviceCode)
+{
+    if (line.size() < 8 || line.compare(0, 6, kOnlinePrefix) != 0 || line[6] != kDelimiter) {
+        return false;
+    }
+    deviceCode = line.substr(7);
+    return !deviceCode.empty();
+}
+
 }  // namespace protocol
 }  // namespace scada

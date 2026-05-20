@@ -11,6 +11,12 @@ namespace config {
 /** 设备模拟器 → 主站（JSON 行协议，当前默认） */
 const int kDeviceJsonPort = 5001;
 
+/** RTU002 设备端口 */
+const int kDeviceJsonPort2 = 5011;
+
+/** RTU003 设备端口 */
+const int kDeviceJsonPort3 = 5012;
+
 /** IEC 104 预留端口（实现 Iec104Protocol 时使用） */
 const int kIec104ReservedPort = 2404;
 

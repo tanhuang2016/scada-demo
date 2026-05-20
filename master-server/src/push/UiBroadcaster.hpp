@@ -54,6 +54,14 @@ public:
      */
     void broadcast(const scada::Telemetry& telem);
 
+    /**
+     * @brief 发送任意文本行到 Qt 客户端（线程安全）
+     *
+     * 用于推送非遥测帧（如 OFFLINE、ONLINE 等控制消息）。
+     * 如果 line 不以 \n 结尾，自动追加。
+     */
+    void sendLine(const std::string& line);
+
     /** @brief 当前是否有 Qt 客户端连接 */
     bool hasClient() const;
 

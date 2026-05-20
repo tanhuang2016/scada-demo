@@ -112,6 +112,38 @@ void UiBroadcaster::broadcast(const scada::Telemetry& telem)
     }
 }
 
+/*
+ * 发送任意文本行。与 broadcast() 共享同一个 TCP 连接。
+ * 如果 line 不以 \n 结尾，自动追加。
+ */
+void UiBroadcaster::sendLine(const std::string& line)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (clientSock_ == INVALID_SOCKET) {
+        return;
+    }
+
+    std::string data = line;
+    if (data.empty() || data[data.size() - 1] != '\n') {
+        data.push_back('\n');
+    }
+
+    int total = static_cast<int>(data.size());
+    int sent = 0;
+    while (sent < total) {
+        int n = send(clientSock_, data.c_str() + sent, total - sent, 0);
+        if (n == SOCKET_ERROR) {
+            std::cerr << "[broadcaster] sendLine() 失败: " << WSAGetLastError()
+                      << "，断开客户端\n";
+            closesocket(clientSock_);
+            clientSock_ = INVALID_SOCKET;
+            return;
+        }
+        sent += n;
+    }
+}
+
 bool UiBroadcaster::hasClient() const
 {
     return clientSock_ != INVALID_SOCKET;

@@ -51,5 +51,32 @@ std::string encodeUpdate(const Telemetry& telem);
  */
 bool decodeUpdate(const std::string& line, Telemetry& out);
 
+// ========== 主站 → Qt 设备状态通知 ==========
+
+/**
+ * @brief 编码设备离线通知
+ * @return OFFLINE|deviceCode
+ */
+std::string encodeOffline(const std::string& deviceCode);
+
+/**
+ * @brief 编码设备上线通知
+ * @return ONLINE|deviceCode
+ */
+std::string encodeOnline(const std::string& deviceCode);
+
+/**
+ * @brief 解析离线通知帧
+ * @param line       输入，如 OFFLINE|RTU001
+ * @param deviceCode 输出：设备编码
+ * @return 是否解析成功
+ */
+bool decodeOffline(const std::string& line, std::string& deviceCode);
+
+/**
+ * @brief 解析上线通知帧
+ */
+bool decodeOnline(const std::string& line, std::string& deviceCode);
+
 }  // namespace protocol
 }  // namespace scada
