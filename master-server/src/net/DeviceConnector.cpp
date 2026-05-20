@@ -98,6 +98,34 @@ void DeviceConnector::disconnect()
     recvBuffer_.clear();
 }
 
+/*
+ * 发送一行数据到设备（线程安全）。
+ * TCP 是全双工的——recv 和 send 可以在不同线程同时进行。
+ */
+bool DeviceConnector::sendLine(const std::string& line)
+{
+    std::lock_guard<std::mutex> lock(sendMutex_);
+    if (!connected_ || sock_ == INVALID_SOCKET) return false;
+
+    std::string data = line;
+    if (data.empty() || data[data.size() - 1] != '\n') {
+        data.push_back('\n');
+    }
+
+    int total = static_cast<int>(data.size());
+    int sent = 0;
+    while (sent < total) {
+        int n = send(sock_, data.c_str() + sent, total - sent, 0);
+        if (n == SOCKET_ERROR) {
+            std::cerr << "[" << config_.deviceCode << "] sendLine 失败: "
+                      << WSAGetLastError() << "\n";
+            return false;
+        }
+        sent += n;
+    }
+    return true;
+}
+
 bool DeviceConnector::isConnected() const
 {
     return connected_;

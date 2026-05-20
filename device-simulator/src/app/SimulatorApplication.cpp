@@ -215,12 +215,47 @@ void SimulatorApplication::runDeviceThread(DeviceThread& dt)
             continue;
         }
 
+        /*
+         * 检查是否有遥控下行命令（非阻塞，100ms 超时）。
+         * 收到 control 帧 → 解码 → 更新开关状态 → 打印日志。
+         */
+        std::string cmdLine;
+        if (dt.server->readLine(cmdLine, 100)) {
+            scada::Telemetry ctrl;
+            if (scada::device_protocol::JsonProtocol().decodeTelemetry(cmdLine, ctrl)) {
+                /* 是 telemetry 帧（正常情况不会收到，但忽略） */
+            } else {
+                /* 尝试解析为 control 帧 */
+                scada::device_protocol::JsonProtocol jp;
+                std::string dummy;
+                // 简单判断：包含 "control" 关键字
+                if (cmdLine.find("\"control\"") != std::string::npos ||
+                    cmdLine.find("\"type\":\"control\"") != std::string::npos) {
+                    // 解析 switch 值
+                    std::size_t pos = cmdLine.find("\"switch\":");
+                    if (pos != std::string::npos) {
+                        int sw = std::atoi(cmdLine.c_str() + pos + 9);
+                        telem.switchState = (sw != 0) ? scada::SwitchState::Closed
+                                                       : scada::SwitchState::Open;
+                        std::cout << dt.label << " 收到遥控: "
+                                  << (sw != 0 ? "合闸" : "分闸") << "\n";
+                    }
+                }
+            }
+        }
+
         {
             std::lock_guard<std::mutex> lock(g_randMutex);
-            telem.voltage = (220.0 + dt.index * 2.0)
-                          + (std::rand() % 200 - 100) / 10.0;
-            telem.current = (10.0 + dt.index * 2.0 - (dt.index == 2 ? 4.0 : 0.0))
-                          + (std::rand() % 100 - 50) / 10.0;
+            if (telem.switchState == scada::SwitchState::Open) {
+                /* 分闸：线路断电，电流归零，电压为残余感应值 */
+                telem.voltage = (std::rand() % 50) / 10.0;   // 0~5V 残余
+                telem.current = 0.0;
+            } else {
+                telem.voltage = (220.0 + dt.index * 2.0)
+                              + (std::rand() % 200 - 100) / 10.0;
+                telem.current = (10.0 + dt.index * 2.0 - (dt.index == 2 ? 4.0 : 0.0))
+                              + (std::rand() % 100 - 50) / 10.0;
+            }
         }
         telem.timestamp = static_cast<std::int64_t>(std::time(NULL));
 

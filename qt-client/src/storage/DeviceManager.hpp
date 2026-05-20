@@ -54,6 +54,9 @@ public:
     ~DeviceManager();
 
     /** @brief 连接 MySQL */
+    /** @brief 获取原始 MYSQL 连接（用于其他操作） */
+    MYSQL* getRaw() { return mysql_; }
+
     bool initialize(const std::string& host, int port,
                     const std::string& user, const std::string& pass,
                     const std::string& db);

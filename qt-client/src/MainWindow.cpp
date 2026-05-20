@@ -12,6 +12,7 @@
 #include "net/MasterClient.hpp"
 #include "pages/DeviceManagePage.hpp"
 #include "pages/MonitorPage.hpp"
+#include "pages/OperationLogPage.hpp"
 #include "storage/DeviceManager.hpp"
 #include "scada/config_defaults.hpp"
 
@@ -45,6 +46,12 @@ MainWindow::MainWindow(QWidget* parent)
 
     /* Tab 2：设备管理 */
     managePage_ = new DeviceManagePage(deviceMgr_, this);
+    ui->manageLayout->addWidget(managePage_);
+
+    /* Tab 3：操作日志 */
+    OperationLogPage* logPage = new OperationLogPage(
+        deviceMgr_->getRaw(), this);
+    ui->logLayout->addWidget(logPage);
     ui->manageLayout->addWidget(managePage_);
 
     /* 设备增删改后自动刷新监控卡片 */

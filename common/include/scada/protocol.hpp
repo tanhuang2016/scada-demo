@@ -73,10 +73,32 @@ std::string encodeOnline(const std::string& deviceCode);
  */
 bool decodeOffline(const std::string& line, std::string& deviceCode);
 
-/**
- * @brief 解析上线通知帧
- */
 bool decodeOnline(const std::string& line, std::string& deviceCode);
+
+// ========== 主站 ↔ 遥控协议（CTRL 帧） ==========
+
+/**
+ * @brief 编码遥控帧
+ * @param deviceCode  设备编码，如 RTU001
+ * @param switchVal   1=合闸, 0=分闸
+ * @return CTRL|deviceCode|switchVal
+ */
+std::string encodeCtrl(const std::string& deviceCode, int switchVal);
+
+/**
+ * @brief 解析遥控帧
+ * @param line        输入，如 CTRL|RTU001|1
+ * @param deviceCode  输出：设备编码
+ * @param switchVal   输出：1=合闸, 0=分闸
+ * @return 是否解析成功
+ */
+bool decodeCtrl(const std::string& line, std::string& deviceCode, int& switchVal);
+
+/**
+ * @brief 编码遥控响应帧
+ * @return CTRL_ACK|deviceCode|switchVal|SUCCESS 或 FAILURE
+ */
+std::string encodeCtrlAck(const std::string& deviceCode, int switchVal, bool success);
 
 }  // namespace protocol
 }  // namespace scada

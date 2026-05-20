@@ -14,6 +14,7 @@ class DeviceManager;
 class DeviceManagePage;
 class MasterClient;
 class MonitorPage;
+class OperationLogPage;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT

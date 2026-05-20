@@ -50,6 +50,9 @@ public:
     /** @brief 关闭监听套接字和客户端连接 */
     void stop();
 
+    /** @brief 读取一行数据（带超时），用于接收遥控等下行命令 */
+    bool readLine(std::string& line, int timeoutMs = 100);
+
     /** @brief 是否有客户端连接 */
     bool hasClient() const;
 

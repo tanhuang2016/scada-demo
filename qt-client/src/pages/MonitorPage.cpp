@@ -10,6 +10,10 @@
 #include <iomanip>
 #include <sstream>
 
+#include <QMessageBox>
+#include <QTcpSocket>
+
+#include "scada/protocol.hpp"
 #include "scada/types.hpp"
 
 MonitorPage::MonitorPage(QWidget* parent)
@@ -22,6 +26,9 @@ MonitorPage::MonitorPage(QWidget* parent)
 {
     qRegisterMetaType<scada::Telemetry>("scada::Telemetry");
     ui->setupUi(this);
+
+    QObject::connect(ui->closeBtn, SIGNAL(clicked()), this, SLOT(onCloseSwitch()));
+    QObject::connect(ui->openBtn, SIGNAL(clicked()), this, SLOT(onOpenSwitch()));
 }
 
 MonitorPage::~MonitorPage()
@@ -138,4 +145,59 @@ void MonitorPage::setOnline(bool online)
         ui->statusLabel->setText(QString::fromUtf8("等待连接..."));
         ui->statusLabel->setStyleSheet("color: gray;");
     }
+}
+
+/*
+ * 发送遥控命令到主站端口 5003。
+ * 格式：CTRL|deviceCode|switchVal（1=合闸, 0=分闸）
+ * 等待主站回复 CTRL_ACK，弹窗提示结果。
+ */
+void MonitorPage::sendControl(int switchVal)
+{
+    QString action = (switchVal != 0) ? QString::fromUtf8("合闸")
+                                       : QString::fromUtf8("分闸");
+    QString msg = QString("确定要对 %1 执行%2操作吗？")
+        .arg(deviceCode_).arg(action);
+
+    if (QMessageBox::question(this, "确认遥控", msg) != QMessageBox::Yes) return;
+
+    QTcpSocket sock;
+    sock.connectToHost(QString::fromUtf8("127.0.0.1"), 5003);
+    if (!sock.waitForConnected(3000)) {
+        QMessageBox::warning(this, "遥控失败", "无法连接主站控制端口 5003");
+        return;
+    }
+
+    std::string cmd = scada::protocol::encodeCtrl(
+        deviceCode_.toStdString(), switchVal);
+    sock.write(cmd.c_str(), static_cast<qint64>(cmd.size()));
+    sock.write("\n", 1);
+    sock.waitForBytesWritten(3000);
+
+    /* 等待响应 */
+    if (sock.waitForReadyRead(5000)) {
+        QByteArray resp = sock.readAll();
+        QString text = QString::fromUtf8(resp).trimmed();
+        if (text.contains("SUCCESS")) {
+            QMessageBox::information(this, "遥控结果",
+                QString("%1 %2 成功").arg(deviceCode_).arg(action));
+        } else {
+            QMessageBox::warning(this, "遥控结果",
+                QString("%1 %2 失败: %3").arg(deviceCode_).arg(action).arg(text));
+        }
+    } else {
+        QMessageBox::warning(this, "遥控结果", "等待响应超时");
+    }
+
+    sock.disconnectFromHost();
+}
+
+void MonitorPage::onCloseSwitch()
+{
+    sendControl(0);  // 分闸
+}
+
+void MonitorPage::onOpenSwitch()
+{
+    sendControl(1);  // 合闸
 }

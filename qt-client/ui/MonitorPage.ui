@@ -88,6 +88,13 @@
      </property>
     </widget>
    </item>
+   <!-- 遥控按钮 -->
+   <item>
+    <layout class="QHBoxLayout" name="ctrlLayout">
+     <item><widget class="QPushButton" name="closeBtn"><property name="text"><string>分闸</string></property></widget></item>
+     <item><widget class="QPushButton" name="openBtn"><property name="text"><string>合闸</string></property></widget></item>
+    </layout>
+   </item>
    <!-- 连接状态 -->
    <item>
     <widget class="QLabel" name="statusLabel">

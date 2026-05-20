@@ -15,10 +15,15 @@
         <property name="spacing"><number>10</number></property>
        </layout>
       </widget>
-      <!-- Tab 2: 设备管理（代码中添加 DeviceManagePage） -->
+      <!-- Tab 2: 设备管理 -->
       <widget class="QWidget" name="manageTab">
        <attribute name="title"><string>设备管理</string></attribute>
        <layout class="QVBoxLayout" name="manageLayout"/>
+      </widget>
+      <!-- Tab 3: 操作日志 -->
+      <widget class="QWidget" name="logTab">
+       <attribute name="title"><string>操作日志</string></attribute>
+       <layout class="QVBoxLayout" name="logLayout"/>
       </widget>
      </widget>
     </item>

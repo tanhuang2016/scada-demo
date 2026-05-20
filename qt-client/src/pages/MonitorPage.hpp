@@ -42,9 +42,14 @@ public slots:
     void onConnectionStateChanged(bool connected);
     void onDeviceOnline(const QString& deviceId);
     void onDeviceOffline(const QString& deviceId);
+    void onCloseSwitch();
+    void onOpenSwitch();
 
 private:
     void setOnline(bool online);
+
+    /** @brief 发送遥控命令到主站端口 5003 */
+    void sendControl(int switchVal);
 
     Ui::MonitorPage* ui;
     QString deviceCode_;

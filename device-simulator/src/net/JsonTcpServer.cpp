@@ -176,6 +176,37 @@ void JsonTcpServer::stop()
     }
 }
 
+/*
+ * 带超时读取一行（用于接收遥控下行命令）。
+ * 如果客户端未连接或无数据，返回 false。
+ */
+bool JsonTcpServer::readLine(std::string& line, int timeoutMs)
+{
+    if (clientSock_ == INVALID_SOCKET) return false;
+
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(clientSock_, &readfds);
+
+    struct timeval tv;
+    tv.tv_sec = timeoutMs / 1000;
+    tv.tv_usec = (timeoutMs % 1000) * 1000;
+
+    int ret = select(0, &readfds, NULL, NULL, &tv);
+    if (ret <= 0) return false;
+
+    char buf[1024];
+    int n = recv(clientSock_, buf, sizeof(buf) - 1, 0);
+    if (n <= 0) return false;
+
+    buf[n] = '\0';
+    line = buf;
+    while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+        line.pop_back();
+    }
+    return true;
+}
+
 bool JsonTcpServer::hasClient() const
 {
     return clientSock_ != INVALID_SOCKET;

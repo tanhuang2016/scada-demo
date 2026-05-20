@@ -7,6 +7,7 @@
  */
 
 #include <memory>
+#include <mutex>
 #include <string>
 
 #ifdef _WIN32
@@ -47,6 +48,12 @@ public:
     bool isConnected() const;
 
     /**
+     * @brief 发送一行数据到设备（线程安全，用于遥控等下行命令）
+     * @return 发送成功与否
+     */
+    bool sendLine(const std::string& line);
+
+    /**
      * @brief 读取一行帧数据（带超时）
      * @param line      输出：读取到的一行（不含 \r\n）
      * @param timeoutMs select 超时毫秒，0 表示阻塞
@@ -65,6 +72,7 @@ private:
     std::unique_ptr<scada::device_protocol::IDeviceProtocol> protocol_;
     SOCKET sock_;
     bool connected_;
+    std::mutex sendMutex_;    ///< 保护 send() 调用，允许多线程同时发送
     std::string recvBuffer_;  ///< 接收缓冲区，用于按行切分
 };
 

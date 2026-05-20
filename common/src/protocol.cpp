@@ -177,5 +177,43 @@ bool decodeOnline(const std::string& line, std::string& deviceCode)
     return !deviceCode.empty();
 }
 
+// ========== 主站 ↔ 遥控协议（CTRL 帧） ==========
+
+namespace {
+
+const char kCtrlPrefix[] = "CTRL";
+const char kCtrlAckPrefix[] = "CTRL_ACK";
+
+}  // namespace
+
+std::string encodeCtrl(const std::string& deviceCode, int switchVal)
+{
+    std::ostringstream oss;
+    oss << kCtrlPrefix << kDelimiter << deviceCode << kDelimiter << switchVal;
+    return oss.str();
+}
+
+bool decodeCtrl(const std::string& line, std::string& deviceCode, int& switchVal)
+{
+    if (line.size() < 10 || line.compare(0, 4, kCtrlPrefix) != 0 || line[4] != kDelimiter) {
+        return false;
+    }
+    /* 跳过 CTRL| */
+    std::istringstream iss(line.substr(5));
+    std::string token;
+    if (!std::getline(iss, deviceCode, kDelimiter) || deviceCode.empty()) return false;
+    if (!std::getline(iss, token)) return false;
+    switchVal = std::atoi(token.c_str());
+    return true;
+}
+
+std::string encodeCtrlAck(const std::string& deviceCode, int switchVal, bool success)
+{
+    std::ostringstream oss;
+    oss << kCtrlAckPrefix << kDelimiter << deviceCode << kDelimiter
+        << switchVal << kDelimiter << (success ? "SUCCESS" : "FAILURE");
+    return oss.str();
+}
+
 }  // namespace protocol
 }  // namespace scada

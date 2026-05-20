@@ -22,9 +22,12 @@ add_executable(qt-client
     src/storage/DeviceManager.cpp
     src/storage/DeviceManager.hpp
     ui/MainWindow.ui
+    src/pages/OperationLogPage.cpp
+    src/pages/OperationLogPage.hpp
     ui/MonitorPage.ui
     ui/DeviceManagePage.ui
     ui/DeviceFormDialog.ui
+    ui/OperationLogPage.ui
 )
 
 # MySQL 路径发现（与 master-server 相同的逻辑）

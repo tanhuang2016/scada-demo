@@ -6,6 +6,7 @@ add_executable(master-server
     src/net/DeviceConnector.cpp
     src/net/ControlListener.cpp
     src/pipeline/TelemetryConsumer.cpp
+    src/pipeline/CommandRouter.cpp
     src/push/UiBroadcaster.cpp
 )
 

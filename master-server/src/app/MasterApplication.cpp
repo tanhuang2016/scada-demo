@@ -18,6 +18,7 @@
 
 #include "net/ControlListener.hpp"
 #include "net/DeviceConnector.hpp"
+#include "pipeline/CommandRouter.hpp"
 #include "pipeline/TelemetryConsumer.hpp"
 #include "push/UiBroadcaster.hpp"
 #include "scada/config_defaults.hpp"
@@ -66,8 +67,10 @@ int MasterApplication::run()
     push::UiBroadcaster broadcaster(scada::config::kMasterToUiPort);
     broadcaster.start();
 
+    pipeline::CommandRouter cmdRouter;
+
     net::ControlListener controlListener(scada::config::kUiToMasterPort);
-    controlListener.start(&running_);
+    controlListener.start(&running_, &cmdRouter);
 
     bool permanentStop = false;
 
@@ -90,7 +93,7 @@ int MasterApplication::run()
          * 启动所有 JSON 设备的连接线程。
          * 每次热加载都会重新创建线程，旧线程在上一轮 join 后已结束。
          */
-        int count = startAllDeviceThreads(repo, consumer, deviceThreads);
+        int count = startAllDeviceThreads(repo, consumer, cmdRouter, deviceThreads);
         if (count == 0) {
             std::cerr << "[master-server] 无可连接的设备\n";
             permanentStop = true;
@@ -129,6 +132,7 @@ int MasterApplication::run()
 int MasterApplication::startAllDeviceThreads(
     storage::DeviceRepository& repo,
     pipeline::TelemetryConsumer& consumer,
+    pipeline::CommandRouter& cmdRouter,
     std::vector<std::thread>& threads)
 {
     std::vector<storage::DeviceConfig> devices;
@@ -161,7 +165,7 @@ int MasterApplication::startAllDeviceThreads(
                   << " (" << it->ipAddress << ":" << it->port << ")\n";
 
         threads.push_back(std::thread(
-            runDeviceThread, *it, std::move(proto), &consumer, &running_));
+            runDeviceThread, *it, std::move(proto), &consumer, &cmdRouter, &running_));
         ++count;
     }
     return count;
@@ -171,9 +175,15 @@ void MasterApplication::runDeviceThread(
     const storage::DeviceConfig& config,
     std::unique_ptr<scada::device_protocol::IDeviceProtocol> protocol,
     pipeline::TelemetryConsumer* consumer,
+    pipeline::CommandRouter* router,
     bool* running)
 {
     net::DeviceConnector connector(config, std::move(protocol));
+
+    /* 注册到 CommandRouter，允许 Qt 遥控该设备 */
+    if (router != NULL) {
+        router->registerDevice(config, &connector, connector.protocol());
+    }
 
     while (*running) {
         std::cout << "[" << config.deviceCode << "] 连接 "
@@ -220,6 +230,11 @@ void MasterApplication::runDeviceThread(
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }
+    }
+
+    /* 注销设备（线程退出前清理） */
+    if (router != NULL) {
+        router->unregisterDevice(config.deviceCode);
     }
 }
 
