@@ -32,10 +32,7 @@ bool JsonTcpServer::start()
         return false;
     }
 
-    /* 允许地址复用，避免重启时端口占用 */
-    int opt = 1;
-    setsockopt(listenSock_, SOL_SOCKET, SO_REUSEADDR,
-               reinterpret_cast<const char*>(&opt), sizeof(opt));
+    /* 不设 SO_REUSEADDR：避免多模拟器实例同时绑定造成混乱 */
 
     struct sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr));

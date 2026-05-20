@@ -112,10 +112,10 @@
 
 ### 完成标准
 
-- [ ] TCP 连接成功，按行读 JSON
-- [ ] `JsonProtocol::decodeTelemetry` 解析正确
-- [ ] 配置为 IEC104 的设备打印「未实现」且不崩溃
-- [ ] 业务层仅依赖 `IDeviceProtocol`，无直接拼 JSON 字符串
+- [x] TCP 连接成功，按行读 JSON
+- [x] `JsonProtocol::decodeTelemetry` 解析正确
+- [x] 配置为 IEC104 的设备打印「未实现」且不崩溃
+- [x] 业务层仅依赖 `IDeviceProtocol`，无直接拼 JSON 字符串
 
 ### 不做
 

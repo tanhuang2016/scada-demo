@@ -51,8 +51,9 @@ bool DeviceConnector::connect()
     }
 
     if (::connect(sock_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR) {
+        int err = WSAGetLastError();  // 立即保存，避免 closesocket 覆盖
         std::cerr << "[master] 连接失败 " << config_.ipAddress << ":" << config_.port
-                  << " (错误: " << WSAGetLastError() << ")\n";
+                  << " (错误: " << err << ")\n";
         closesocket(sock_);
         sock_ = INVALID_SOCKET;
         return false;
@@ -96,21 +97,46 @@ bool DeviceConnector::readLine(std::string& line, int timeoutMs)
 
     /* 缓冲区不足，等待网络数据 */
     while (true) {
+        /* Windows select: 须同时检查 exceptfds 捕获远端 RST */
         fd_set readfds;
+        fd_set exceptfds;
         FD_ZERO(&readfds);
+        FD_ZERO(&exceptfds);
         FD_SET(sock_, &readfds);
+        FD_SET(sock_, &exceptfds);
 
         struct timeval tv;
         tv.tv_sec = timeoutMs / 1000;
         tv.tv_usec = (timeoutMs % 1000) * 1000;
 
-        int ret = select(0, &readfds, NULL, NULL, &tv);
+        int ret = select(0, &readfds, NULL, &exceptfds, &tv);
         if (ret == 0) {
-            /* 超时，非断连 */
+            /* 超时：用 SO_ERROR 显式探测远端是否已断开
+             * （Windows loopback 上 select 可能不报异常） */
+            int err = 0;
+            int errlen = sizeof(err);
+            getsockopt(sock_, SOL_SOCKET, SO_ERROR,
+                       reinterpret_cast<char*>(&err), &errlen);
+            if (err != 0) {
+                std::cerr << "[master] SO_ERROR=" << err << "，远端已断开\n";
+                connected_ = false;
+                return false;
+            }
+            return false;  // 真正的超时
+        }
+        if (ret == SOCKET_ERROR) {
+            std::cerr << "[master] select() 失败: " << WSAGetLastError() << "\n";
+            connected_ = false;
             return false;
         }
-        if (ret < 0) {
-            std::cerr << "[master] select() 失败: " << WSAGetLastError() << "\n";
+
+        /* 远端发送 RST 时，Windows 可能只置位 exceptfds */
+        if (FD_ISSET(sock_, &exceptfds)) {
+            int err = 0;
+            int errlen = sizeof(err);
+            getsockopt(sock_, SOL_SOCKET, SO_ERROR,
+                       reinterpret_cast<char*>(&err), &errlen);
+            std::cerr << "[master] 套接字异常: " << err << "\n";
             connected_ = false;
             return false;
         }
@@ -119,7 +145,10 @@ bool DeviceConnector::readLine(std::string& line, int timeoutMs)
         char buf[4096];
         int n = recv(sock_, buf, sizeof(buf), 0);
         if (n <= 0) {
-            /* 连接关闭或出错 */
+            /* 连接关闭（n==0）或出错（n<0） */
+            if (n < 0) {
+                std::cerr << "[master] recv() 错误: " << WSAGetLastError() << "\n";
+            }
             connected_ = false;
             return false;
         }

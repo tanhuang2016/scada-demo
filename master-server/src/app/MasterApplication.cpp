@@ -148,10 +148,14 @@ int MasterApplication::runDeviceLoop(net::DeviceConnector& connector,
 
         std::cout << "[master-server] 连接成功，开始接收遥测\n";
 
-        /* 遥测读取循环 */
+        /* 遥测读取循环：select 超时计数器作兜底断连检测 */
         std::string line;
+        int noDataCount = 0;
+        const int kMaxNoData = 4;   ///< 500ms * 4 = 2秒无数据视为断连
+
         while (running_ && connector.isConnected()) {
             if (connector.readLine(line, 500)) {
+                noDataCount = 0;  // 有数据到达，重置
                 /* 通过 IDeviceProtocol 解码，业务层不直接拼 JSON */
                 scada::Telemetry telem;
                 if (connector.protocol()->decodeTelemetry(line, telem)) {
@@ -159,8 +163,20 @@ int MasterApplication::runDeviceLoop(net::DeviceConnector& connector,
                 } else {
                     std::cerr << "[master-server] 遥测解析失败: " << line << "\n";
                 }
+            } else {
+                /* readLine 返回 false：可能是超时，也可能是断连 */
+                if (!connector.isConnected()) {
+                    break;  // 已明确断连
+                }
+                /* select 超时，累计超时次数作兜底 */
+                ++noDataCount;
+                if (noDataCount >= kMaxNoData) {
+                    std::cout << "[master-server] " << (kMaxNoData * 500 / 1000)
+                              << " 秒无数据，判定离线\n";
+                    connector.disconnect();
+                    break;
+                }
             }
-            /* select 超时：继续循环检查 running_ */
         }
 
         /* 连接断开 */
