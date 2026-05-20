@@ -11,7 +11,12 @@ add_executable(qt-client
     src/main.cpp
     src/MainWindow.cpp
     src/MainWindow.hpp
+    src/net/MasterClient.cpp
+    src/net/MasterClient.hpp
+    src/pages/MonitorPage.cpp
+    src/pages/MonitorPage.hpp
     ui/MainWindow.ui
+    ui/MonitorPage.ui
 )
 
 target_link_libraries(qt-client PRIVATE

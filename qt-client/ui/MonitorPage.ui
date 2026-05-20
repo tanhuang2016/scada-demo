@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MonitorPage</class>
+ <widget class="QWidget" name="MonitorPage">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>360</width><height>280</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>实时监控</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- 设备名称 -->
+   <item>
+    <widget class="QLabel" name="deviceNameLabel">
+     <property name="font">
+      <font><pointsize>14</pointsize><weight>75</weight><bold>true</bold></font>
+     </property>
+     <property name="text">
+      <string>RTU001</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <!-- 分隔线 -->
+   <item>
+    <widget class="Line" name="line">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+    </widget>
+   </item>
+   <!-- 监测值表单 -->
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="voltageTitle">
+       <property name="text"><string>电压</string></property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="voltageValue">
+       <property name="text"><string>-- V</string></property>
+       <property name="font">
+        <font><pointsize>12</pointsize><weight>75</weight><bold>true</bold></font>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="currentTitle">
+       <property name="text"><string>电流</string></property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="currentValue">
+       <property name="text"><string>-- A</string></property>
+       <property name="font">
+        <font><pointsize>12</pointsize><weight>75</weight><bold>true</bold></font>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="switchTitle">
+       <property name="text"><string>开关状态</string></property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="switchValue">
+       <property name="text"><string>--</string></property>
+       <property name="font">
+        <font><pointsize>12</pointsize><weight>75</weight><bold>true</bold></font>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <!-- 分隔线 -->
+   <item>
+    <widget class="Line" name="line_2">
+     <property name="orientation"><enum>Qt::Horizontal</enum></property>
+    </widget>
+   </item>
+   <!-- 更新时间 -->
+   <item>
+    <widget class="QLabel" name="updateTimeLabel">
+     <property name="text"><string>最后更新: --:--:--</string></property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <!-- 连接状态 -->
+   <item>
+    <widget class="QLabel" name="statusLabel">
+     <property name="text"><string>等待连接...</string></property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: gray;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+</ui>

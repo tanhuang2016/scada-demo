@@ -1,6 +1,6 @@
 /**
  * @file   MasterApplication.cpp
- * @brief  主站应用实现（迭代2：JSON 单设备遥测采集）
+ * @brief  主站应用实现（迭代3：JSON 遥测采集 + UiBroadcaster 推送 Qt）
  *
  * 流程概述：
  *   1. 加载 MySQL 设备配置
@@ -38,6 +38,7 @@
 
 #include "net/DeviceConnector.hpp"
 #include "pipeline/TelemetryConsumer.hpp"
+#include "push/UiBroadcaster.hpp"
 #include "scada/config_defaults.hpp"
 #include "scada/protocol_factory.hpp"
 #include "storage/DeviceRepository.hpp"
@@ -143,16 +144,27 @@ int MasterApplication::run()
     }
 
     /*
-     * 创建连接器和消费者，进入遥测读取循环。
+     * 创建连接器、推送器和消费者，进入遥测读取循环。
      *
-     * 连接器持有 IDeviceProtocol 实例和 TCP 套接字；
-     * 消费者负责 Telemetry 的业务处理（本迭代仅控制台打印，后续入库/推 UI）。
+     * 连接器：TCP 客户端，管理到模拟器的连接
+     * 推送器：TCP 服务端，接受 Qt 客户端连接并推送 UPDATE 帧（端口 5002）
+     * 消费者：协调遥测处理——控制台打印 + 推送到 Qt
      */
     net::DeviceConnector connector(targetDevice, std::move(targetProtocol));
+
+    /* 启动 UiBroadcaster——独立线程运行 accept 循环 */
+    push::UiBroadcaster broadcaster(scada::config::kMasterToUiPort);
+    if (!broadcaster.start()) {
+        std::cerr << "[master-server] UiBroadcaster 启动失败，Qt 推送不可用\n";
+        // 不阻塞主站运行，Qt 客户端连接不上会报错但主站继续工作
+    }
+
     pipeline::TelemetryConsumer consumer;
+    consumer.setBroadcaster(&broadcaster);
 
     int ret = runDeviceLoop(connector, consumer);
 
+    broadcaster.stop();
     connector.disconnect();
     std::cout << "[master-server] 已停止\n";
     return ret;

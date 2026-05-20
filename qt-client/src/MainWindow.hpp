@@ -2,7 +2,8 @@
 
 /**
  * @file   MainWindow.hpp
- * @brief  主窗口：布局由 ui/MainWindow.ui 定义，本类仅处理业务与状态更新
+ * @brief  Qt 主窗口——持有实时监控页和主站 TCP 客户端
+ * @module qt-client
  */
 
 #include <QMainWindow>
@@ -11,8 +12,16 @@ namespace Ui {
 class MainWindow;
 }
 
+class MasterClient;
+class MonitorPage;
+
 /**
- * @brief SCADA 客户端主窗口（迭代 3 起挂载各业务页面）
+ * @brief SCADA Qt 客户端主窗口
+ *
+ * 构造时：
+ *   1. 创建 MasterClient → 连接主站 5002 端口（自动重连）
+ *   2. 创建 MonitorPage → 添加到 pageContainer 容器
+ *   3. 连接 MasterClient 信号到 MonitorPage 槽
  */
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -22,6 +31,7 @@ public:
     ~MainWindow();
 
 private:
-    /** 由 Qt Designer 生成的 UI 类，对应 ui/MainWindow.ui */
     Ui::MainWindow* ui;
+    MasterClient* client_;
+    MonitorPage* monitorPage_;
 };

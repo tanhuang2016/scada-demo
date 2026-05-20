@@ -11,18 +11,19 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>SCADA Demo</string>
+   <string>SCADA Demo — 实时监控</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
+    <!-- 页面容器：运行时动态加载 MonitorPage 至此 -->
     <item>
-     <widget class="QLabel" name="statusLabel">
-      <property name="text">
-       <string>等待连接主站…</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
+     <widget class="QWidget" name="pageContainer" native="true">
+      <layout class="QVBoxLayout" name="pageLayout">
+       <property name="leftMargin"><number>20</number></property>
+       <property name="rightMargin"><number>20</number></property>
+       <property name="topMargin"><number>20</number></property>
+       <property name="bottomMargin"><number>20</number></property>
+      </layout>
      </widget>
     </item>
    </layout>

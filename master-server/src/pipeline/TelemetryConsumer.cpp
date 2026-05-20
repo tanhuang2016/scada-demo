@@ -1,6 +1,6 @@
 /**
  * @file   TelemetryConsumer.cpp
- * @brief  遥测消费者实现（迭代2：控制台打印）
+ * @brief  遥测消费者实现（迭代3：控制台打印 + 推 Qt）
  * @module master-server
  */
 
@@ -9,14 +9,25 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
+
+#include "push/UiBroadcaster.hpp"
 
 namespace master {
 namespace pipeline {
 
+TelemetryConsumer::TelemetryConsumer()
+    : broadcaster_(NULL)
+{
+}
+
+void TelemetryConsumer::setBroadcaster(push::UiBroadcaster* broadcaster)
+{
+    broadcaster_ = broadcaster;
+}
+
 void TelemetryConsumer::onTelemetry(const scada::Telemetry& telemetry)
 {
-    /* 格式化时间 */
+    /* 控制台输出（迭代 2 已有，保留用于调试） */
     std::time_t ts = static_cast<std::time_t>(telemetry.timestamp);
     char timeBuf[32] = {};
 #ifdef _WIN32
@@ -35,6 +46,11 @@ void TelemetryConsumer::onTelemetry(const scada::Telemetry& telemetry)
               << " | 开关: " << switchStr
               << " | 时间: " << timeBuf
               << std::endl;
+
+    /* 推送至 Qt 客户端（通过 UiBroadcaster，端口 5002） */
+    if (broadcaster_ != NULL) {
+        broadcaster_->broadcast(telemetry);
+    }
 }
 
 void TelemetryConsumer::onDeviceOffline(const std::string& deviceCode)

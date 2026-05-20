@@ -5,6 +5,7 @@ add_executable(master-server
     src/storage/DeviceRepository.cpp
     src/net/DeviceConnector.cpp
     src/pipeline/TelemetryConsumer.cpp
+    src/push/UiBroadcaster.cpp
 )
 
 # 用户通过 CMake 变量指定 MySQL Connector/C 路径：-DMYSQL_PATH="D:/soft/mysql/mysql-connector-c-6.1.11-winx64"
