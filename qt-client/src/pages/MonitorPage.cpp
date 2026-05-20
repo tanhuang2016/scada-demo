@@ -57,6 +57,18 @@ void MonitorPage::onTelemetry(const scada::Telemetry& telemetry)
     if (id != deviceCode_) return;  // 不属于本卡片
 
     /*
+     * 告警状态：UPDATE 帧第 7 列 alarm=1 表示设备有活跃告警。
+     * 卡片背景变红提示用户关注。
+     */
+    if (telemetry.alarm) {
+        ui->statusLabel->setText(QString::fromUtf8("告警"));
+        ui->statusLabel->setStyleSheet("color: red; font-weight: bold;");
+    } else if (deviceOnline_ && masterOnline_) {
+        ui->statusLabel->setText(QString::fromUtf8("在线"));
+        ui->statusLabel->setStyleSheet("color: green; font-weight: bold;");
+    }
+
+    /*
      * 隐式上线：能收到遥测数据说明设备一定在线。
      *
      * 为什么不用依赖 ONLINE 帧：

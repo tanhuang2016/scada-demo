@@ -11,6 +11,7 @@
 
 #include "net/MasterClient.hpp"
 #include "pages/DeviceManagePage.hpp"
+#include "pages/AlarmPage.hpp"
 #include "pages/MonitorPage.hpp"
 #include "pages/OperationLogPage.hpp"
 #include "storage/DeviceManager.hpp"
@@ -52,6 +53,10 @@ MainWindow::MainWindow(QWidget* parent)
     OperationLogPage* logPage = new OperationLogPage(
         deviceMgr_->getRaw(), this);
     ui->logLayout->addWidget(logPage);
+
+    /* Tab 4：告警列表 */
+    AlarmPage* alarmPage = new AlarmPage(deviceMgr_->getRaw(), this);
+    ui->alarmLayout->addWidget(alarmPage);
     ui->manageLayout->addWidget(managePage_);
 
     /* 设备增删改后自动刷新监控卡片 */

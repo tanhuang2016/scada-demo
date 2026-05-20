@@ -1,6 +1,6 @@
 /**
  * @file   TelemetryConsumer.cpp
- * @brief  遥测消费者实现（迭代4：多设备 + 在线状态跟踪）
+ * @brief  遥测消费者实现（迭代7：+告警引擎判定）
  * @module master-server
  */
 
@@ -26,8 +26,14 @@ void TelemetryConsumer::setBroadcaster(push::UiBroadcaster* broadcaster)
     broadcaster_ = broadcaster;
 }
 
-void TelemetryConsumer::onTelemetry(const scada::Telemetry& telemetry)
+void TelemetryConsumer::onTelemetry(scada::Telemetry& telemetry)
 {
+    /*
+     * 告警判定（必须在 broadcast 之前，这样 alarm 字段可被编码进 UPDATE 帧）
+     * AlarmEngine 内部做去重和 MySQL 持久化。
+     */
+    alarmEngine_.checkTelemetry(telemetry);
+
     /* 控制台输出 */
     std::time_t ts = static_cast<std::time_t>(telemetry.timestamp);
     char timeBuf[32] = {};
@@ -47,14 +53,11 @@ void TelemetryConsumer::onTelemetry(const scada::Telemetry& telemetry)
               << " | 电流: " << std::setprecision(2) << telemetry.current << "A"
               << " | 开关: " << switchStr
               << " | 时间: " << timeBuf
+              << (telemetry.alarm ? " [告警]" : "")
               << std::endl;
 
     if (broadcaster_ == NULL) return;
 
-    /*
-     * 跟踪在线状态：如果之前为离线或未记录，发送 ONLINE 通知到 Qt。
-     * 这样 Qt 端可以将卡片从灰色切换为绿色。
-     */
     const std::string& deviceCode = telemetry.deviceId;
     std::map<std::string, bool>::iterator it = onlineMap_.find(deviceCode);
     bool wasOnline = (it != onlineMap_.end() && it->second);
@@ -63,10 +66,11 @@ void TelemetryConsumer::onTelemetry(const scada::Telemetry& telemetry)
         onlineMap_[deviceCode] = true;
         std::string onlineFrame = scada::protocol::encodeOnline(deviceCode);
         broadcaster_->sendLine(onlineFrame);
+        alarmEngine_.onDeviceOnline(deviceCode);
         std::cout << "[状态] " << deviceCode << " 上线\n";
     }
 
-    /* 推送 UPDATE 帧到 Qt */
+    /* 推送 UPDATE 帧到 Qt（alarm 字段已设置） */
     broadcaster_->broadcast(telemetry);
 }
 
@@ -74,11 +78,11 @@ void TelemetryConsumer::onDeviceOffline(const std::string& deviceCode)
 {
     std::cout << "[离线] " << deviceCode << " 连接已断开\n";
 
+    /* 通信中断告警 */
+    alarmEngine_.onDeviceOffline(deviceCode);
+
     if (broadcaster_ == NULL) return;
 
-    /*
-     * 去重：如果已是离线状态则不重复发送 OFFLINE 帧。
-     */
     std::map<std::string, bool>::iterator it = onlineMap_.find(deviceCode);
     bool wasOnline = (it != onlineMap_.end() && it->second);
 

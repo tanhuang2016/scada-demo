@@ -10,6 +10,7 @@
 #include <string>
 
 #include "scada/types.hpp"
+#include "pipeline/AlarmEngine.hpp"
 
 namespace master {
 namespace push {
@@ -35,8 +36,8 @@ public:
     /** @brief 设置主站→Qt 推送器 */
     void setBroadcaster(push::UiBroadcaster* broadcaster);
 
-    /** @brief 收到一条遥测数据（多设备线程安全） */
-    void onTelemetry(const scada::Telemetry& telemetry);
+    /** @brief 收到一条遥测数据（多设备线程安全，会设置 alarm 字段） */
+    void onTelemetry(scada::Telemetry& telemetry);
 
     /** @brief 设备离线通知（发送 OFFLINE 帧到 Qt） */
     void onDeviceOffline(const std::string& deviceCode);
@@ -46,7 +47,8 @@ public:
 
 private:
     push::UiBroadcaster* broadcaster_;
-    std::map<std::string, bool> onlineMap_;  ///< deviceCode → 是否在线
+    AlarmEngine alarmEngine_;
+    std::map<std::string, bool> onlineMap_;
 };
 
 }  // namespace pipeline

@@ -248,11 +248,22 @@ void SimulatorApplication::runDeviceThread(DeviceThread& dt)
             std::lock_guard<std::mutex> lock(g_randMutex);
             if (telem.switchState == scada::SwitchState::Open) {
                 /* 分闸：线路断电，电流归零，电压为残余感应值 */
-                telem.voltage = (std::rand() % 50) / 10.0;   // 0~5V 残余
+                telem.voltage = (std::rand() % 50) / 10.0;
                 telem.current = 0.0;
             } else {
-                telem.voltage = (220.0 + dt.index * 2.0)
-                              + (std::rand() % 200 - 100) / 10.0;
+                /*
+                 * 合闸：正常电压，范围 200~250V（超出 215~235 告警阈值以触发告警）。
+                 * 约 20% 的概率出现越限值，用于演示告警功能。
+                 */
+                int rv = std::rand() % 500;  // 0~499
+                if (rv < 50) {
+                    telem.voltage = 240.0 + (std::rand() % 50) / 10.0;   // 240~245V 越上限
+                } else if (rv < 100) {
+                    telem.voltage = 210.0 - (std::rand() % 50) / 10.0;   // 205~210V 越下限
+                } else {
+                    telem.voltage = (220.0 + dt.index * 2.0)
+                                  + (std::rand() % 100 - 50) / 10.0;     // 正常 215~235V
+                }
                 telem.current = (10.0 + dt.index * 2.0 - (dt.index == 2 ? 4.0 : 0.0))
                               + (std::rand() % 100 - 50) / 10.0;
             }

@@ -10,6 +10,7 @@
 #include <QVector>
 
 namespace Ui { class MainWindow; }
+class AlarmPage;
 class DeviceManager;
 class DeviceManagePage;
 class MasterClient;

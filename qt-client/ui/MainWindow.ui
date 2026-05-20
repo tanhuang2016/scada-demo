@@ -25,6 +25,11 @@
        <attribute name="title"><string>操作日志</string></attribute>
        <layout class="QVBoxLayout" name="logLayout"/>
       </widget>
+      <!-- Tab 4: 告警列表 -->
+      <widget class="QWidget" name="alarmTab">
+       <attribute name="title"><string>告警列表</string></attribute>
+       <layout class="QVBoxLayout" name="alarmLayout"/>
+      </widget>
      </widget>
     </item>
    </layout>

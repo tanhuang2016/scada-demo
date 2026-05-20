@@ -7,6 +7,7 @@ add_executable(master-server
     src/net/ControlListener.cpp
     src/pipeline/TelemetryConsumer.cpp
     src/pipeline/CommandRouter.cpp
+    src/pipeline/AlarmEngine.cpp
     src/push/UiBroadcaster.cpp
 )
 
