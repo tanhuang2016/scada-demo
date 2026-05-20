@@ -2,7 +2,9 @@
 
 /**
  * @file   protocol.hpp
- * @brief  主站与 Qt 之间、及脚手架阶段的文本行协议编解码
+ * @brief  主站 ↔ Qt 文本行协议（与设备侧 JSON 分离）
+ *
+ * 设备侧协议见 device_protocol.hpp / JsonProtocol / Iec104Protocol。
  */
 
 #include <string>

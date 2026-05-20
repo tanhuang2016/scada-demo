@@ -32,7 +32,7 @@ int MasterApplication::run()
 {
     running_ = true;
     std::cout << "[master-server] 启动" << std::endl
-              << "  IEC104 设备端口: " << scada::config::kDeviceToMasterPort << std::endl
+              << "  JSON 设备端口: " << scada::config::kDeviceJsonPort << std::endl
               << "  UI 推送端口: " << scada::config::kMasterToUiPort << std::endl
               << "  UI 控制端口: " << scada::config::kUiToMasterPort << std::endl;
 
@@ -86,7 +86,7 @@ int MasterApplication::run()
         }
     }
 
-    /* 迭代2：启动 104；迭代3：启动 UiBroadcaster */
+    /* 迭代2：TCP + JsonProtocol 收遥测；迭代3：UiBroadcaster */
     while (running_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }

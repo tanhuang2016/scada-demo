@@ -8,8 +8,11 @@
 namespace scada {
 namespace config {
 
-/** 设备模拟器 → 主站（IEC 104 默认端口，与协议栈配置一致） */
-const int kDeviceToMasterPort = 2404;
+/** 设备模拟器 → 主站（JSON 行协议，当前默认） */
+const int kDeviceJsonPort = 5001;
+
+/** IEC 104 预留端口（实现 Iec104Protocol 时使用） */
+const int kIec104ReservedPort = 2404;
 
 /** 主站 → Qt 实时数据推送 */
 const int kMasterToUiPort = 5002;

@@ -1,5 +1,8 @@
 add_library(scada_common STATIC
     src/protocol.cpp
+    src/json_protocol.cpp
+    src/iec104_protocol.cpp
+    src/protocol_factory.cpp
 )
 
 target_include_directories(scada_common PUBLIC

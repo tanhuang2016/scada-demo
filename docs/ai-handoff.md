@@ -28,7 +28,8 @@ docs/architecture.md
 【技术约束摘要】
 - C++11 only；注释完整（@file/@brief/关键逻辑中文注释）
 - Qt：布局用 qt-client/ui/*.ui（Designer），禁止手写整套主界面布局
-- 设备通信：IEC104:2404（仅主站与模拟器）；主站↔Qt：TCP 5002/5003 文本帧
+- 设备通信：JSON:5001（JsonProtocol）；IEC104:2404 仅预留；主站↔Qt：5002/5003 文本帧
+- 业务层只依赖 IDeviceProtocol，见 docs/architecture.md
 - 业务库 MySQL；Qt 本地 SQLite 仅界面偏好
 
 【本次任务】

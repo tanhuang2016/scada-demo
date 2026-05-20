@@ -9,7 +9,7 @@
 |------|------|---------------------------|
 | 0 | 脚手架 | 三程序能启动，协议桩可编解码 |
 | 1 | 数据与配置基座 | MySQL 有表有种子，主站启动打印设备列表 |
-| 2 | IEC104 单链路 | 主站连 1 台模拟器，控制台看到总召与周期遥测 |
+| 2 | JSON 单设备链路 | 主站经 JsonProtocol 收 1 台模拟器周期遥测 |
 | 3 | Qt 实时监控 | 界面看到电压/电流/开关刷新（至少 1 台） |
 | 4 | 三设备 + 在线状态 | 3 台设备同时在线，绿/灰状态正确 |
 | 5 | 设备与测点维护 | Qt 增删改设备，重启主站后按新配置连接 |
@@ -83,38 +83,43 @@
 
 ---
 
-## 迭代 2：IEC104 单设备贯通
+## 迭代 2：JSON 单设备贯通
 
 ### 目标
 
-- 模拟器作为 104 子站监听 2404；主站对 **1 台** 启用设备建链、总召、收周期数据。
+- 模拟器 TCP **5001** 周期发送 JSON `telemetry`；主站通过 `IDeviceProtocol` / `JsonProtocol` 接收 **1 台** 设备数据。
+- `Iec104Protocol` 仅保留占位，本迭代不实现 104。
 
 ### 交付物
 
 | 路径 | 内容 |
 |------|------|
-| `common/` 或 `third_party/` | 104 协议栈封装（或最小可用子集） |
-| `device-simulator/` | 104 服务器 + 1 设备遥测 |
-| `master-server/src/net/` | 104 主站连接、总召、解析到内存 |
+| `common/` | `JsonProtocol` 编解码（已有桩则完善）、`protocol_factory` |
+| `device-simulator/src/net/` | JSON TCP 服务端 + 周期上送 |
+| `master-server/src/net/` | JSON TCP 客户端/服务端、按 `device.protocol` 选协议 |
+| `master-server/src/pipeline/` | 业务层消费 `Telemetry`（与协议解耦） |
+
+协议格式见 [protocol-device-json.md](protocol-device-json.md)。
 
 ### 演示步骤
 
 ```text
-1. 启动 device-simulator（2404）
+1. 启动 device-simulator（5001）
 2. 启动 master-server
-3. 日志周期打印：设备 RTU001 电压/电流/开关
+3. 日志周期打印：RTU001 电压/电流/开关（来自 JSON 解析）
 4. 关闭模拟器 → 主站报离线（迭代 4 完善 UI，本迭代日志即可）
 ```
 
 ### 完成标准
 
-- [ ] 建链成功
-- [ ] 总召后能收到遥测/遥信
-- [ ] 模拟器合闸/分闸状态变化能在主站日志体现
+- [ ] TCP 连接成功，按行读 JSON
+- [ ] `JsonProtocol::decodeTelemetry` 解析正确
+- [ ] 配置为 IEC104 的设备打印「未实现」且不崩溃
+- [ ] 业务层仅依赖 `IDeviceProtocol`，无直接拼 JSON 字符串
 
 ### 不做
 
-- Qt 界面、MySQL 历史入库、多设备
+- Qt 界面、MySQL 历史入库、多设备、真实 IEC104
 
 ---
 
@@ -314,7 +319,7 @@
 flowchart TD
   I0[迭代0 脚手架]
   I1[迭代1 MySQL基座]
-  I2[迭代2 IEC104单设备]
+  I2[迭代2 JSON单设备]
   I3[迭代3 Qt实时监控]
   I4[迭代4 三设备]
   I5[迭代5 设备维护]
@@ -352,12 +357,24 @@ flowchart TD
 
 ---
 
-## 技术栈变更记录（相对脚手架）
+## 技术栈变更记录
 
-| 项 | 脚手架 | 目标 |
-|----|--------|------|
-| 设备协议 | 文本 TELEM | IEC 104 |
-| 业务库 | 未接 | MySQL |
-| Qt 本地 | 无 | SQLite 偏好 |
+| 项 | 说明 |
+|----|------|
+| 设备协议（当前） | JSON 行协议，端口 5001，`JsonProtocol` |
+| 设备协议（预留） | IEC 104，端口 2404，`Iec104Protocol` 占位 |
+| 主站↔Qt | 文本行 `UPDATE`/`CTRL`（与设备 JSON 分离） |
+| 业务库 | MySQL |
+| Qt 本地 | SQLite 偏好 |
 
-迭代 2 之前可暂时用文本协议打通迭代 3 **仅作风险验证**，正式验收以 104 为准。
+---
+
+## 未来可选：IEC 104 迭代（未排期）
+
+在 JSON 全链路跑通后，若需贴近现场：
+
+1. 实现 `Iec104Protocol`（lib60870 或自研子集）。
+2. 种子数据 `protocol=IEC104`、`port=2404`。
+3. 演示：同一业务层，仅替换 `createProtocolFromName` 结果。
+
+**不要求**为完成迭代 8 而必须实现 104。

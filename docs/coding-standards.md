@@ -86,6 +86,16 @@ qt-client/
 
 - 无 Qt UI，保持控制台 + 清晰日志。
 - 同样遵守 C++11 与注释规范。
+- **设备协议**：业务代码只调用 `IDeviceProtocol`；JSON 在 `JsonProtocol`，104 不得在业务层散落 `if (104)` 解析逻辑（除工厂选择外）。
+
+## 协议相关文件（common）
+
+| 文件 | 职责 |
+|------|------|
+| `device_protocol.hpp` | 抽象接口 |
+| `json_protocol.*` | 当前设备协议 |
+| `iec104_protocol.*` | 占位，勿在无需求时填满实现 |
+| `protocol_factory.*` | 按 `device.protocol` 创建实例 |
 
 ## 其他约定
 

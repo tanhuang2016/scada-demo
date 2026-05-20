@@ -17,8 +17,8 @@
 | rated_voltage | 额定电压 | 10kV |
 | description | 备注 | 演示设备 |
 | ip_address | 通信 IP | 127.0.0.1 |
-| port | 端口 | 2404 |
-| protocol | 协议 | IEC104 |
+| port | 端口 | 5001（JSON）/ 2404（IEC104 预留） |
+| protocol | 协议 | **JSON**（默认）/ IEC104（未实现） |
 | common_address | ASDU 公共地址 | 1 |
 | link_address | 链路地址 | 1 |
 | connect_timeout_sec | 连接超时 | 30 |

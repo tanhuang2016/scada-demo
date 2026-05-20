@@ -11,7 +11,7 @@
 #include <windows.h>
 
 #include "scada/config_defaults.hpp"
-#include "scada/protocol.hpp"
+#include "scada/json_protocol.hpp"
 #include "scada/types.hpp"
 
 namespace simulator {
@@ -32,7 +32,8 @@ int SimulatorApplication::run()
 
     running_ = true;
     std::cout << "[device-simulator] 启动（脚手架）\n"
-              << "  IEC104 监听端口: " << scada::config::kDeviceToMasterPort << '\n';
+              << "  JSON 设备端口: " << scada::config::kDeviceJsonPort << '\n'
+              << "  (IEC104 预留端口: " << scada::config::kIec104ReservedPort << ")\n";
 
     scada::Telemetry sample;
     sample.deviceId = "RTU001";
@@ -41,8 +42,11 @@ int SimulatorApplication::run()
     sample.switchState = scada::SwitchState::Closed;
     sample.timestamp = 0;
 
-    /* 迭代 2：改为 104 服务器；此处仅演示文本编码 */
-    std::cout << "  示例帧: " << scada::protocol::encodeTelemetry(sample) << '\n';
+    scada::device_protocol::JsonProtocol jsonProto;
+    std::string frame;
+    if (jsonProto.encodeTelemetry(sample, frame)) {
+        std::cout << "  示例 JSON 帧: " << frame;
+    }
 
     while (running_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));

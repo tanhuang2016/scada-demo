@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS device (
     description TEXT COMMENT '备注说明',
     ip_address VARCHAR(64) NOT NULL COMMENT '通信IP地址',
     port INT NOT NULL COMMENT '通信端口',
-    protocol VARCHAR(32) NOT NULL COMMENT '通信协议，如 IEC104',
+    protocol VARCHAR(32) NOT NULL COMMENT '通信协议：JSON（默认）或 IEC104（预留）',
     common_address INT NOT NULL COMMENT 'IEC104 ASDU 公共地址',
     link_address INT NOT NULL COMMENT 'IEC104 链路地址',
     connect_timeout_sec INT NOT NULL DEFAULT 30 COMMENT '连接超时时间（秒）',
