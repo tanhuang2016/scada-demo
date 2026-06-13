@@ -18,17 +18,16 @@
    或命令行：
 
 ```powershell
-cmake -S . -B build -DCMAKE_PREFIX_PATH="<你的Qt路径>/5.15.2/msvc2019_64"
+cmake -S . -B build -DCMAKE_PREFIX_PATH="<你的Qt路径>/5.15.2/mingw81_64"
 cmake --build build
 ```
 
-## 运行（脚手架）
-
-当前为三端占位程序，无真实网络联调：
+## 运行
 
 ```powershell
-.\build\bin\master-server.exe
+# 启动顺序很重要
 .\build\bin\device-simulator.exe
+.\build\bin\master-server.exe
 .\build\bin\qt-client.exe
 ```
 
@@ -38,7 +37,8 @@ cmake --build build
 
 - **主站**：`master-server`，汇聚数据、存库、转发遥控
 - **子站/设备**：`device-simulator` 模拟
-- **四遥**：遥测、遥信、遥控（本演示暂不实现遥调）
+- **四遥**：遥测、遥信、遥控、遥调
+- **客户端**：`qt-client` 监控界面
 
 ## 文档
 
@@ -49,4 +49,4 @@ cmake --build build
 | [docs/architecture.md](docs/architecture.md) | 架构与端口 |
 | [AGENTS.md](AGENTS.md) | AI 协作约定 |
 
-当前进度：**迭代 0**（脚手架）已完成，下一步 **迭代 1**（MySQL 建表 + 主站读配置）。
+当前进度：**迭代 8**（曲线登录联调）已完成，系统具备完整的设备监控、数据采集、实时显示和远程控制功能。
