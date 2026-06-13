@@ -1,0 +1,48 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "mingw-debug",
+      "displayName": "MinGW Debug",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build/mingw-debug",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "D:/soft/Qt/5.15.2/mingw81_64",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "environment": {
+        "PATH": "D:/soft/Qt/Tools/mingw810_64/bin;$penv{PATH}"
+      }
+    },
+    {
+      "name": "mingw-release",
+      "displayName": "MinGW Release",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build/mingw-release",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "D:/soft/Qt/5.15.2/mingw81_64",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "environment": {
+        "PATH": "D:/soft/Qt/Tools/mingw810_64/bin;$penv{PATH}"
+      }
+    },
+    {
+      "hidden": true,
+      "name": "Qt",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{QTDIR}"
+      },
+      "vendor": {
+        "qt-project.org/Qt": {
+          "checksum": "wVa86FgEkvdCTVp1/nxvrkaemJc="
+        }
+      }
+    }
+  ],
+  "vendor": {
+    "qt-project.org/Presets": {
+      "checksum": "r/Mv/+HuE86Wl0kQbRyt9n96YM4="
+    }
+  }
+}
